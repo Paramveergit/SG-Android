@@ -1,0 +1,82 @@
+{
+  "project_info": {
+    "project_number": "453261302664",
+    "project_id": "sundergarments-a564f",
+    "storage_bucket": "sundergarments-a564f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:453261302664:android:3a40a0247f11eb1ae7783d",
+        "android_client_info": {
+          "package_name": "com.example.e_comm"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "453261302664-ngrlrd4rcjhdn1ffl3j8207b69guq1fq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA3yHgOsoD89un4qoC8jkC0kv7i4VFZ7GM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "453261302664-ngrlrd4rcjhdn1ffl3j8207b69guq1fq.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "453261302664-ou8rh3dmlv7n94t7o78242mhhv4afeet.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.eCommAdmin"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:453261302664:android:5a8830742cf479d4e7783d",
+        "android_client_info": {
+          "package_name": "com.example.e_comm_admin"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "453261302664-ngrlrd4rcjhdn1ffl3j8207b69guq1fq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA3yHgOsoD89un4qoC8jkC0kv7i4VFZ7GM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "453261302664-ngrlrd4rcjhdn1ffl3j8207b69guq1fq.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "453261302664-ou8rh3dmlv7n94t7o78242mhhv4afeet.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.eCommAdmin"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
