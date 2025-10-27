@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:get/get.dart';
 import '../controllers/category-images-controller.dart';
-import '../models/categories_model.dart';
+import '../models/categories-model.dart';
 import '../services/generate-ids-service.dart';
 import '../utils/constant.dart';
 

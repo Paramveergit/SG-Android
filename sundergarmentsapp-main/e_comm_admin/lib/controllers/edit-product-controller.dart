@@ -27,8 +27,16 @@ class EditProductController extends GetxController {
       if (snapshot.exists) {
         final data = snapshot.data() as Map<String, dynamic>?;
         if (data != null && data['productImages'] != null) {
-          images.value =
-              List<String>.from(data['productImages'] as List<dynamic>);
+          // Safely convert List<dynamic> to List<String>
+          final dynamic imagesData = data['productImages'];
+          if (imagesData is List) {
+            images.value = imagesData
+                .where((item) => item != null && item.toString().isNotEmpty)
+                .map((item) => item.toString())
+                .toList();
+          } else {
+            images.value = <String>[];
+          }
           update();
         }
       }

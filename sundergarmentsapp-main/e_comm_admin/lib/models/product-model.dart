@@ -7,7 +7,7 @@ class ProductModel {
   final String categoryName;
   final String salePrice;
   final String fullPrice;
-  final List productImages;
+  final List<String> productImages;
   final String deliveryTime;
   final bool isSale;
   final String productDescription;
@@ -48,18 +48,45 @@ class ProductModel {
 
   factory ProductModel.fromMap(Map<String, dynamic> json) {
     return ProductModel(
-      productId: json['productId'],
-      categoryId: json['categoryId'],
-      productName: json['productName'],
-      categoryName: json['categoryName'],
-      salePrice: json['salePrice'],
-      fullPrice: json['fullPrice'],
-      productImages: json['productImages'],
-      deliveryTime: json['deliveryTime'],
-      isSale: json['isSale'],
-      productDescription: json['productDescription'],
+      productId: json['productId'] ?? '',
+      categoryId: json['categoryId'] ?? '',
+      productName: json['productName'] ?? '',
+      categoryName: json['categoryName'] ?? '',
+      salePrice: json['salePrice'] ?? '',
+      fullPrice: json['fullPrice'] ?? '',
+      productImages: _parseProductImages(json['productImages']),
+      deliveryTime: json['deliveryTime'] ?? '',
+      isSale: json['isSale'] ?? false,
+      productDescription: json['productDescription'] ?? '',
       createdAt: json['createdAt'],
       updatedAt: json['updatedAt'],
     );
+  }
+
+  /// Safely parses product images from various data types
+  /// Handles null, empty lists, and ensures all items are strings
+  static List<String> _parseProductImages(dynamic imagesData) {
+    if (imagesData == null) return [];
+    
+    if (imagesData is List) {
+      // Handle both List<dynamic> and List<String> from Firestore
+      return imagesData
+          .where((item) => item != null && item.toString().isNotEmpty)
+          .map((item) => item.toString())
+          .toList();
+    }
+    
+    return [];
+  }
+
+  /// Gets the first product image URL safely
+  /// Returns null if no images are available
+  String? get firstImageUrl {
+    return productImages.isNotEmpty ? productImages[0] : null;
+  }
+
+  /// Checks if the product has any images
+  bool get hasImages {
+    return productImages.isNotEmpty;
   }
 }

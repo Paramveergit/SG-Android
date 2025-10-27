@@ -1,7 +1,7 @@
 // ignore_for_file: avoid_unnecessary_containers, prefer_const_constructors
 
 import 'package:e_comm_admin/controllers/edit_category_controller.dart';
-import 'package:e_comm_admin/models/categories_model.dart';
+import 'package:e_comm_admin/models/categories-model.dart';
 import 'package:e_comm_admin/utils/constant.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';

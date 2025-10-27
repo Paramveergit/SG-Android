@@ -14,7 +14,7 @@ class OrderModel {
   final bool isSale;
   final String productDescription;
   final String productId;
-  final List productImages;
+  final List<String> productImages;
   final String productName;
   final int productQuantity;
   final double productTotalPrice;
@@ -74,26 +74,53 @@ class OrderModel {
   // Create an instance of the class from a map
   factory OrderModel.fromJson(Map<String, dynamic> json) {
     return OrderModel(
-      categoryId: json['categoryId'],
-      categoryName: json['categoryName'],
+      categoryId: json['categoryId'] ?? '',
+      categoryName: json['categoryName'] ?? '',
       createdAt: json['createdAt'],
-      customerAddress: json['customerAddress'],
-      customerDeviceToken: json['customerDeviceToken'],
-      customerId: json['customerId'],
-      customerName: json['customerName'],
-      customerPhone: json['customerPhone'],
-      deliveryTime: json['deliveryTime'],
-      fullPrice: json['fullPrice'],
-      isSale: json['isSale'],
-      productDescription: json['productDescription'],
-      productId: json['productId'],
-      productImages: json['productImages'],
-      productName: json['productName'],
-      productQuantity: json['productQuantity'],
-      productTotalPrice: json['productTotalPrice'],
-      salePrice: json['salePrice'],
-      status: json['status'],
+      customerAddress: json['customerAddress'] ?? '',
+      customerDeviceToken: json['customerDeviceToken'] ?? '',
+      customerId: json['customerId'] ?? '',
+      customerName: json['customerName'] ?? '',
+      customerPhone: json['customerPhone'] ?? '',
+      deliveryTime: json['deliveryTime'] ?? '',
+      fullPrice: json['fullPrice'] ?? '',
+      isSale: json['isSale'] ?? false,
+      productDescription: json['productDescription'] ?? '',
+      productId: json['productId'] ?? '',
+      productImages: _parseProductImages(json['productImages']),
+      productName: json['productName'] ?? '',
+      productQuantity: json['productQuantity'] ?? 0,
+      productTotalPrice: (json['productTotalPrice'] ?? 0.0).toDouble(),
+      salePrice: json['salePrice'] ?? '',
+      status: json['status'] ?? 0,
       updatedAt: json['updatedAt'],
     );
+  }
+
+  /// Safely parses product images from various data types
+  /// Handles null, empty lists, and ensures all items are strings
+  static List<String> _parseProductImages(dynamic imagesData) {
+    if (imagesData == null) return [];
+    
+    if (imagesData is List) {
+      // Handle both List<dynamic> and List<String> from Firestore
+      return imagesData
+          .where((item) => item != null && item.toString().isNotEmpty)
+          .map((item) => item.toString())
+          .toList();
+    }
+    
+    return [];
+  }
+
+  /// Gets the first product image URL safely
+  /// Returns null if no images are available
+  String? get firstImageUrl {
+    return productImages.isNotEmpty ? productImages[0] : null;
+  }
+
+  /// Checks if the product has any images
+  bool get hasImages {
+    return productImages.isNotEmpty;
   }
 }

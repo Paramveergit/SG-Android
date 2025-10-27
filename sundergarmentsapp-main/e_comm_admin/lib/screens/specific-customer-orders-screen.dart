@@ -69,73 +69,215 @@ class SpecificCustomerOrderScreen extends StatelessWidget {
               itemBuilder: (context, index) {
                 final data = snapshot.data!.docs[index];
                 String orderDocId = data.id;
-                OrderModel orderModel = OrderModel(
-                  categoryId: data['categoryId'],
-                  categoryName: data['categoryName'],
-                  createdAt: data['createdAt'],
-                  customerAddress: data['customerAddress'],
-                  customerDeviceToken: data['customerDeviceToken'],
-                  customerId: data['customerId'],
-                  customerName: data['customerName'],
-                  customerPhone: data['customerPhone'],
-                  deliveryTime: data['deliveryTime'],
-                  fullPrice: data['fullPrice'],
-                  isSale: data['isSale'],
-                  productDescription: data['productDescription'],
-                  productId: data['productId'],
-                  productImages: data['productImages'],
-                  productName: data['productName'],
-                  productQuantity: data['productQuantity'],
-                  productTotalPrice: data['productTotalPrice'],
-                  salePrice: data['salePrice'],
-                  status: data['status'],
-                  updatedAt: data['updatedAt'],
-                );
+                OrderModel orderModel = OrderModel.fromJson(data.data() as Map<String, dynamic>);
 
                 return Card(
                   elevation: 5,
-                  child: ListTile(
-                    onTap: () => Get.to(
-                      () => CheckSingleOrderScreen(
-                        docId: snapshot.data!.docs[index].id,
-                        orderModel: orderModel,
-                      ),
-                    ),
-                    leading: CircleAvatar(
-                      backgroundColor: AppConstant.appScendoryColor,
-                      child: Text(orderModel.customerName[0]),
-                    ),
-                    title: Text(data['customerName']),
-                    subtitle: Row(
-                      mainAxisAlignment: MainAxisAlignment.start,
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(orderModel.productName),
-                        SizedBox(width: 10.0),
-                        orderModel.status == 0
-                            ? Text(
-                                "In Process..",
-                                style: TextStyle(color: Colors.blue),
-                              )
-                            : orderModel.status == 1
-                                ? Text(
-                                    "Delivered",
-                                    style: TextStyle(color: Colors.green),
-                                  )
-                                : Text(
-                                    "Cancelled",
-                                    style: TextStyle(color: Colors.red),
+                        // Order Info Section
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              backgroundColor: AppConstant.appScendoryColor,
+                              child: Text(
+                                orderModel.customerName.isNotEmpty 
+                                    ? orderModel.customerName[0].toUpperCase()
+                                    : 'U',
+                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    orderModel.customerName,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
+                                  SizedBox(height: 4),
+                                  Text(
+                                    orderModel.productName,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                  SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      Text(
+                                        'Status: ',
+                                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                                      ),
+                                      Container(
+                                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: orderModel.status == -1
+                                              ? Colors.orange.withOpacity(0.1)
+                                              : orderModel.status == 0
+                                                  ? Colors.blue.withOpacity(0.1)
+                                                  : orderModel.status == 1
+                                                      ? Colors.green.withOpacity(0.1)
+                                                      : Colors.red.withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: orderModel.status == -1
+                                                ? Colors.orange
+                                                : orderModel.status == 0
+                                                    ? Colors.blue
+                                                    : orderModel.status == 1
+                                                        ? Colors.green
+                                                        : Colors.red,
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          orderModel.status == -1
+                                              ? "Pending"
+                                              : orderModel.status == 0
+                                                  ? "In Process"
+                                                  : orderModel.status == 1
+                                                      ? "Delivered"
+                                                      : "Cancelled",
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: orderModel.status == -1
+                                                ? Colors.orange
+                                                : orderModel.status == 0
+                                                    ? Colors.blue
+                                                    : orderModel.status == 1
+                                                        ? Colors.green
+                                                        : Colors.red,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // View Details Button
+                            GestureDetector(
+                              onTap: () => Get.to(
+                                () => CheckSingleOrderScreen(
+                                  docId: snapshot.data!.docs[index].id,
+                                  orderModel: orderModel,
+                                ),
+                              ),
+                              child: Container(
+                                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: AppConstant.appMainColor,
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Text(
+                                  'View',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 16),
+                        // Status Change Buttons
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () async {
+                                  await updateOrderStatus(userDocId: docId, orderDocId: orderDocId, status: -1);
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: orderModel.status == -1 ? Colors.orange : Colors.orange.withOpacity(0.3),
+                                  foregroundColor: Colors.white,
+                                  padding: EdgeInsets.symmetric(vertical: 8),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                child: Text(
+                                  'Pending',
+                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 6),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () async {
+                                  await updateOrderStatus(userDocId: docId, orderDocId: orderDocId, status: 0);
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: orderModel.status == 0 ? Colors.blue : Colors.blue.withOpacity(0.3),
+                                  foregroundColor: Colors.white,
+                                  padding: EdgeInsets.symmetric(vertical: 8),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                child: Text(
+                                  'In Process',
+                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 6),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () async {
+                                  await updateOrderStatus(userDocId: docId, orderDocId: orderDocId, status: 1);
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: orderModel.status == 1 ? Colors.green : Colors.green.withOpacity(0.3),
+                                  foregroundColor: Colors.white,
+                                  padding: EdgeInsets.symmetric(vertical: 8),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                child: Text(
+                                  'Delivered',
+                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 6),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () async {
+                                  await updateOrderStatus(userDocId: docId, orderDocId: orderDocId, status: 2);
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: orderModel.status == 2 ? Colors.red : Colors.red.withOpacity(0.3),
+                                  foregroundColor: Colors.white,
+                                  padding: EdgeInsets.symmetric(vertical: 8),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                child: Text(
+                                  'Cancelled',
+                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
-                    ),
-                    trailing: InkWell(
-                      onTap: () {
-                        showBottomSheet(
-                          userDocId: docId,
-                          orderModel: orderModel,
-                          orderDocId: orderDocId,
-                        );
-                      },
-                      child: Icon(Icons.more_vert),
                     ),
                   ),
                 );
@@ -149,85 +291,41 @@ class SpecificCustomerOrderScreen extends StatelessWidget {
     );
   }
 
-  void showBottomSheet({
+  /// Updates the order status in Firestore
+  Future<void> updateOrderStatus({
     required String userDocId,
-    required OrderModel orderModel,
     required String orderDocId,
-  }) {
-    Get.bottomSheet(
-      Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20.0),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      await FirebaseFirestore.instance
-                          .collection('orders')
-                          .doc(userDocId)
-                          .collection('confirmOrders')
-                          .doc(orderDocId)
-                          .update(
-                        {
-                          'status': 0,
-                        },
-                      );
-                      Get.back();
-                    },
-                    child: Text('In Process'),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      await FirebaseFirestore.instance
-                          .collection('orders')
-                          .doc(userDocId)
-                          .collection('confirmOrders')
-                          .doc(orderDocId)
-                          .update(
-                        {
-                          'status': 1,
-                        },
-                      );
-                      Get.back();
-                    },
-                    child: Text('Delivered'),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: ElevatedButton(
-                      onPressed: () async {
-                        await FirebaseFirestore.instance
-                            .collection('orders')
-                            .doc(userDocId)
-                            .collection('confirmOrders')
-                            .doc(orderDocId)
-                            .update(
-                          {
-                            'status': 2,
-                          },
-                        );
-                        Get.back();
-                      },
-                      child: Text('Cancelled')),
-                )
-              ],
-            )
-          ],
-        ),
-      ),
-    );
+    required int status,
+  }) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('orders')
+          .doc(userDocId)
+          .collection('confirmOrders')
+          .doc(orderDocId)
+          .update({
+        'status': status,
+      });
+      
+      // Show success message
+      Get.snackbar(
+        'Success',
+        'Order status updated successfully!',
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.TOP,
+        duration: Duration(seconds: 2),
+      );
+    } catch (e) {
+      // Show error message
+      Get.snackbar(
+        'Error',
+        'Failed to update order status: $e',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.TOP,
+        duration: Duration(seconds: 3),
+      );
+    }
   }
 }

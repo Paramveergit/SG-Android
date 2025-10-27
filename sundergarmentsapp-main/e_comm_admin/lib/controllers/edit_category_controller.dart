@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:get/get.dart';
 
-import '../models/categories_model.dart';
+import '../models/categories-model.dart';
 
 class EditCategoryController extends GetxController {
   CategoriesModel categoriesModel;

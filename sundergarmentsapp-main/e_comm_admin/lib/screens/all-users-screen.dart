@@ -71,20 +71,7 @@ class _AllUsersScreenState extends State<AllUsersScreen> {
               itemBuilder: (context, index) {
                 final data = snapshot.data!.docs[index];
 
-                UserModel userModel = UserModel(
-                  uId: data['uId'],
-                  username: data['username'],
-                  email: data['email'],
-                  phone: data['phone'],
-                  userImg: data['userImg'],
-                  userDeviceToken: data['userDeviceToken'],
-                  country: data['country'],
-                  userAddress: data['userAddress'],
-                  street: data['street'],
-                  isAdmin: data['isAdmin'],
-                  isActive: data['isActive'],
-                  createdOn: data['createdOn'],
-                );
+                UserModel userModel = UserModel.fromMap(data.data() as Map<String, dynamic>);
 
                 return Card(
                   elevation: 5,
@@ -98,14 +85,14 @@ class _AllUsersScreenState extends State<AllUsersScreen> {
 
                     leading: CircleAvatar(
                       backgroundColor: AppConstant.appScendoryColor,
-                      backgroundImage: CachedNetworkImageProvider(
-                        userModel.userImg,
-                        errorListener: (err) {
-                          // Handle the error here
-                          print('Error loading image');
-                          Icon(Icons.error);
-                        },
-                      ),
+                      backgroundImage: _getUserImage(userModel.userImg),
+                      child: _getUserImage(userModel.userImg) == null
+                          ? Icon(
+                              Icons.person,
+                              color: Colors.white,
+                              size: 30,
+                            )
+                          : null,
                     ),
                     title: Text(userModel.username),
                     subtitle: Text(userModel.email),
@@ -120,5 +107,23 @@ class _AllUsersScreenState extends State<AllUsersScreen> {
         },
       ),
     );
+  }
+
+  /// Safely gets the user image with proper error handling
+  /// Returns null if no image URL is available or if there's an error
+  ImageProvider? _getUserImage(String userImgUrl) {
+    try {
+      if (userImgUrl.isNotEmpty) {
+        return CachedNetworkImageProvider(
+          userImgUrl,
+          errorListener: (err) {
+            print('Error loading user image: $err');
+          },
+        );
+      }
+    } catch (e) {
+      print('Error accessing user image: $e');
+    }
+    return null;
   }
 }

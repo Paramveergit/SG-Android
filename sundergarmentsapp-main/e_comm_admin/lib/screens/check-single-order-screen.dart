@@ -50,7 +50,15 @@ class CheckSingleOrderScreen extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 50.0,
-                foregroundImage: NetworkImage(orderModel.productImages[0]),
+                backgroundColor: AppConstant.appScendoryColor,
+                backgroundImage: _getProductImage(orderModel.productImages),
+                child: !orderModel.hasImages
+                    ? Icon(
+                        Icons.image,
+                        color: Colors.white,
+                        size: 40,
+                      )
+                    : null,
               ),
             ],
           ),
@@ -73,5 +81,19 @@ class CheckSingleOrderScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// Safely gets the first product image with proper error handling
+  /// Returns null if no images are available or if there's an error
+  ImageProvider? _getProductImage(List<String> productImages) {
+    try {
+      final firstImageUrl = productImages.isNotEmpty ? productImages[0] : null;
+      if (firstImageUrl != null && firstImageUrl.isNotEmpty) {
+        return NetworkImage(firstImageUrl);
+      }
+    } catch (e) {
+      print('Error accessing product image: $e');
+    }
+    return null;
   }
 }
