@@ -62,6 +62,23 @@
             <category android:name="android.intent.category.BROWSABLE" />
             <data android:scheme="com.sundergarments.ecomm" android:host="oauth2redirect" />
         </intent>
+        <!-- Required for WhatsApp integration -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" android:host="wa.me" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" android:host="web.whatsapp.com" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="whatsapp" />
+        </intent>
+        <!-- WhatsApp package query -->
+        <package android:name="com.whatsapp" />
+        <package android:name="com.whatsapp.w4b" />
+        <!-- Google Play Services -->
         <package android:name="com.google.android.gms" />
     </queries>
 </manifest>
