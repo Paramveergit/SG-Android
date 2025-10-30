@@ -13,8 +13,14 @@ import '../controllers/products-images-controller.dart';
 import '../services/generate-ids-service.dart';
 import '../widgets/dropdown-categories-widget.dart';
 
-class AddProductScreen extends StatelessWidget {
+class AddProductScreen extends StatefulWidget {
   AddProductScreen({super.key});
+
+  @override
+  State<AddProductScreen> createState() => _AddProductScreenState();
+}
+
+class _AddProductScreenState extends State<AddProductScreen> {
 
   AddProductImagesController addProductImagesController =
       Get.put(AddProductImagesController());
@@ -27,7 +33,29 @@ class AddProductScreen extends StatelessWidget {
   TextEditingController productNameController = TextEditingController();
   TextEditingController salePriceController = TextEditingController();
   TextEditingController fullPriceController = TextEditingController();
-  TextEditingController productDescriptionController = TextEditingController();
+  // Dynamic description lines
+  List<String> descriptionLines = [''];
+
+  void addDescriptionLine() {
+    setState(() {
+      descriptionLines.add('');
+    });
+  }
+
+  void removeDescriptionLine(int index) {
+    if (descriptionLines.length > 1) {
+      setState(() {
+        descriptionLines.removeAt(index);
+      });
+    }
+  }
+
+  String getFormattedDescription() {
+    return descriptionLines
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .join('\n');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -71,41 +99,57 @@ class AddProductScreen extends StatelessWidget {
                     return imageController.selectedIamges.length > 0
                         ? Container(
                             width: MediaQuery.of(context).size.width - 20,
-                            height: Get.height / 3.0,
+                            height: Get.height / 2.5,
                             child: GridView.builder(
                               itemCount: imageController.selectedIamges.length,
                               physics: const BouncingScrollPhysics(),
                               gridDelegate:
                                   const SliverGridDelegateWithFixedCrossAxisCount(
                                 crossAxisCount: 2,
-                                mainAxisSpacing: 20,
-                                crossAxisSpacing: 10,
+                                mainAxisSpacing: 8,
+                                crossAxisSpacing: 8,
+                                childAspectRatio: 1.0,
                               ),
                               itemBuilder: (BuildContext context, int index) {
                                 return Stack(
                                   children: [
-                                    Image.file(
-                                      File(addProductImagesController
-                                          .selectedIamges[index].path),
-                                      fit: BoxFit.cover,
-                                      height: Get.height / 4,
-                                      width: Get.width / 2,
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Image.file(
+                                        File(addProductImagesController
+                                            .selectedIamges[index].path),
+                                        fit: BoxFit.cover,
+                                        width: double.infinity,
+                                        height: double.infinity,
+                                      ),
                                     ),
                                     Positioned(
-                                      right: 10,
-                                      top: 0,
-                                      child: InkWell(
+                                      right: 6,
+                                      top: 6,
+                                      child: GestureDetector(
                                         onTap: () {
                                           imageController.removeImages(index);
-                                          print(imageController
-                                              .selectedIamges.length);
                                         },
-                                        child: CircleAvatar(
-                                          backgroundColor:
-                                              AppConstant.appScendoryColor,
+                                        child: Container(
+                                          width: 24,
+                                          height: 24,
+                                          decoration: BoxDecoration(
+                                            color: Colors.red,
+                                            shape: BoxShape.circle,
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black
+                                                    .withOpacity(0.3),
+                                                spreadRadius: 1,
+                                                blurRadius: 2,
+                                                offset: Offset(0, 1),
+                                              ),
+                                            ],
+                                          ),
                                           child: Icon(
                                             Icons.close,
-                                            color: AppConstant.appTextColor,
+                                            color: Colors.white,
+                                            size: 14,
                                           ),
                                         ),
                                       ),
@@ -133,7 +177,7 @@ class AddProductScreen extends StatelessWidget {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text("Is Sale"),
+                            Text("Flash Sale"),
                             Switch(
                               value: isSaleController.isSale.value,
                               activeColor: AppConstant.appMainColor,
@@ -150,24 +194,40 @@ class AddProductScreen extends StatelessWidget {
                 //form
                 SizedBox(height: 10.0),
                 Container(
-                  height: 65,
                   margin: EdgeInsets.symmetric(horizontal: 10.0),
-                  child: TextFormField(
-                    cursorColor: AppConstant.appMainColor,
-                    textInputAction: TextInputAction.next,
-                    controller: productNameController,
-                    decoration: InputDecoration(
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 10.0,
-                      ),
-                      hintText: "Product Name",
-                      hintStyle: TextStyle(fontSize: 12.0),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.all(
-                          Radius.circular(10.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Product Name",
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey[700],
                         ),
                       ),
-                    ),
+                      SizedBox(height: 5),
+                      Container(
+                        height: 65,
+                        child: TextFormField(
+                          cursorColor: AppConstant.appMainColor,
+                          textInputAction: TextInputAction.next,
+                          controller: productNameController,
+                          decoration: InputDecoration(
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 10.0,
+                            ),
+                            hintText: "Enter product name",
+                            hintStyle: TextStyle(fontSize: 12.0),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.all(
+                                Radius.circular(10.0),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 SizedBox(height: 10.0),
@@ -175,24 +235,41 @@ class AddProductScreen extends StatelessWidget {
                 Obx(() {
                   return isSaleController.isSale.value
                       ? Container(
-                          height: 65,
                           margin: EdgeInsets.symmetric(horizontal: 10.0),
-                          child: TextFormField(
-                            cursorColor: AppConstant.appMainColor,
-                            textInputAction: TextInputAction.next,
-                            controller: salePriceController,
-                            decoration: InputDecoration(
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 10.0,
-                              ),
-                              hintText: "Sale Price",
-                              hintStyle: TextStyle(fontSize: 12.0),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.all(
-                                  Radius.circular(10.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Flash Price",
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.grey[700],
                                 ),
                               ),
-                            ),
+                              SizedBox(height: 5),
+                              Container(
+                                height: 65,
+                                child: TextFormField(
+                                  cursorColor: AppConstant.appMainColor,
+                                  textInputAction: TextInputAction.next,
+                                  controller: salePriceController,
+                                  keyboardType: TextInputType.number,
+                                  decoration: InputDecoration(
+                                    contentPadding: EdgeInsets.symmetric(
+                                      horizontal: 10.0,
+                                    ),
+                                    hintText: "Enter flash sale price",
+                                    hintStyle: TextStyle(fontSize: 12.0),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.all(
+                                        Radius.circular(10.0),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         )
                       : SizedBox.shrink();
@@ -200,24 +277,41 @@ class AddProductScreen extends StatelessWidget {
 
                 SizedBox(height: 10.0),
                 Container(
-                  height: 65,
                   margin: EdgeInsets.symmetric(horizontal: 10.0),
-                  child: TextFormField(
-                    cursorColor: AppConstant.appMainColor,
-                    textInputAction: TextInputAction.next,
-                    controller: fullPriceController,
-                    decoration: InputDecoration(
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 10.0,
-                      ),
-                      hintText: "Full Price",
-                      hintStyle: TextStyle(fontSize: 12.0),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.all(
-                          Radius.circular(10.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Price",
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey[700],
                         ),
                       ),
-                    ),
+                      SizedBox(height: 5),
+                      Container(
+                        height: 65,
+                        child: TextFormField(
+                          cursorColor: AppConstant.appMainColor,
+                          textInputAction: TextInputAction.next,
+                          controller: fullPriceController,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 10.0,
+                            ),
+                            hintText: "Enter regular price",
+                            hintStyle: TextStyle(fontSize: 12.0),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.all(
+                                Radius.circular(10.0),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
 
@@ -246,26 +340,96 @@ class AddProductScreen extends StatelessWidget {
 
                 SizedBox(height: 10.0),
                 Container(
-                  height: 65,
                   margin: EdgeInsets.symmetric(horizontal: 10.0),
-                  child: TextFormField(
-                    cursorColor: AppConstant.appMainColor,
-                    textInputAction: TextInputAction.newline,
-                    controller: productDescriptionController,
-                    keyboardType: TextInputType.multiline,
-                    maxLines: null,
-                    decoration: InputDecoration(
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 10.0,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "Description",
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                          ElevatedButton.icon(
+                            onPressed: addDescriptionLine,
+                            icon: Icon(Icons.add, size: 16),
+                            label: Text("Add Line"),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppConstant.appMainColor,
+                              foregroundColor: AppConstant.appTextColor,
+                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              minimumSize: Size(0, 32),
+                            ),
+                          ),
+                        ],
                       ),
-                      hintText: "Product Desc",
-                      hintStyle: TextStyle(fontSize: 12.0),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.all(
-                          Radius.circular(10.0),
-                        ),
+                      SizedBox(height: 5),
+                      Column(
+                        children: descriptionLines.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final line = entry.value;
+                          return Container(
+                            margin: EdgeInsets.only(bottom: 8),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Container(
+                                    height: 50,
+                                    child: TextFormField(
+                                      cursorColor: AppConstant.appMainColor,
+                                      textInputAction: TextInputAction.next,
+                                      initialValue: line,
+                                      onChanged: (value) {
+                                        descriptionLines[index] = value;
+                                      },
+                                      decoration: InputDecoration(
+                                        contentPadding: EdgeInsets.symmetric(
+                                          horizontal: 10.0,
+                                          vertical: 10.0,
+                                        ),
+                                        hintText: "Enter description line ${index + 1}",
+                                        hintStyle: TextStyle(fontSize: 12.0),
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.all(
+                                            Radius.circular(10.0),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                if (descriptionLines.length > 1)
+                                  Container(
+                                    margin: EdgeInsets.only(left: 8),
+                                    child: GestureDetector(
+                                      onTap: () => removeDescriptionLine(index),
+                                      child: Container(
+                                        width: 40,
+                                        height: 50,
+                                        decoration: BoxDecoration(
+                                          color: Colors.red[50],
+                                          borderRadius: BorderRadius.circular(10),
+                                          border: Border.all(color: Colors.red[200]!),
+                                        ),
+                                        child: Icon(
+                                          Icons.remove,
+                                          color: Colors.red[600],
+                                          size: 20,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
                       ),
-                    ),
+                    ],
                   ),
                 ),
 
@@ -301,7 +465,7 @@ class AddProductScreen extends StatelessWidget {
                       );
                       return;
                     }
-                    if (productDescriptionController.text.trim().isEmpty) {
+                    if (getFormattedDescription().isEmpty) {
                       Get.snackbar(
                         'Validation Error',
                         'Please enter product description.',
@@ -344,8 +508,7 @@ class AddProductScreen extends StatelessWidget {
                         productImages: addProductImagesController.arrImagesUrl,
                         deliveryTime: '',
                         isSale: isSaleController.isSale.value,
-                        productDescription:
-                            productDescriptionController.text.trim(),
+                        productDescription: getFormattedDescription(),
                         createdAt: DateTime.now(),
                         updatedAt: DateTime.now(),
                       );
