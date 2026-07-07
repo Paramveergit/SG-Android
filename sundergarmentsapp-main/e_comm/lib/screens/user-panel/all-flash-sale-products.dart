@@ -32,12 +32,12 @@ class _AllFlashSaleProductScreenState extends State<AllFlashSaleProductScreen> {
           style: TextStyle(color: AppConstant.appTextColor),
         ),
       ),
-      body: FutureBuilder(
-        future: FirebaseFirestore.instance
+      body: StreamBuilder(
+        stream: FirebaseFirestore.instance
             .collection('products')
             .where('isSale', isEqualTo: true)
             .limit(20)
-            .get(),
+            .snapshots(),
         builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
           if (snapshot.hasError) {
             return Center(

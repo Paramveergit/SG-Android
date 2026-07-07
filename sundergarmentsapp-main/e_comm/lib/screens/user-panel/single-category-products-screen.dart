@@ -64,11 +64,11 @@ class _AllSingleCategoryProductsScreenState
       return _buildComingSoonState();
     }
 
-    return FutureBuilder(
-      future: FirebaseFirestore.instance
+    return StreamBuilder(
+      stream: FirebaseFirestore.instance
           .collection('products')
           .where('categoryId', isEqualTo: widget.categoryId)
-          .get(),
+          .snapshots(),
       builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
         if (snapshot.hasError) {
           return Center(

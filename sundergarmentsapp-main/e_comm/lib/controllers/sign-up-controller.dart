@@ -49,8 +49,11 @@ class SignUpController extends GetxController {
         city: userCity,
       );
 
-      // add data into database
-      _firestore
+      // add data into database — MUST be awaited so the profile exists
+      // before we move the user forward. Without this, HomeRouter can
+      // find no profile doc yet and bounce a just-signed-up user back
+      // to the Sign-In screen even though they're already authenticated.
+      await _firestore
           .collection('users')
           .doc(userCredential.user!.uid)
           .set(userModel.toJson());
@@ -60,11 +63,39 @@ class SignUpController extends GetxController {
       EasyLoading.dismiss();
       Get.snackbar(
         "Error",
-        "$e",
+        _friendlyAuthError(e),
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: AppConstant.appScendoryColor,
         colorText: AppConstant.appTextColor,
       );
+      return null;
+    } catch (e) {
+      // Covers Firestore write failures (network drop, permissions, etc.)
+      // that happen AFTER the auth account was already created. Without
+      // this, the user ends up with a valid login but no profile doc,
+      // and no error message telling them what happened.
+      EasyLoading.dismiss();
+      Get.snackbar(
+        "Error",
+        "Something went wrong while setting up your account. Please try signing in - if it still doesn't work, try signing up again.",
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppConstant.appScendoryColor,
+        colorText: AppConstant.appTextColor,
+      );
+      return null;
+    }
+  }
+
+  String _friendlyAuthError(FirebaseAuthException e) {
+    switch (e.code) {
+      case 'email-already-in-use':
+        return "That email is already registered. Try logging in instead.";
+      case 'weak-password':
+        return "That password is too weak. Use at least 6 characters.";
+      case 'invalid-email':
+        return "That email address doesn't look right.";
+      default:
+        return "Couldn't create your account. Please try again.";
     }
   }
 }

@@ -15,8 +15,8 @@ class AllProductsWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder(
-      future: FirebaseFirestore.instance.collection('products').orderBy('createdAt', descending: true).limit(20).get(),
+    return StreamBuilder(
+      stream: FirebaseFirestore.instance.collection('products').orderBy('createdAt', descending: true).limit(20).snapshots(),
       builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
         if (snapshot.hasError) {
           return Center(

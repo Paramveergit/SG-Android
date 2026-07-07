@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../utils/app-constant.dart';
 import '../../widgets/banner-widget.dart';
 import '../../widgets/welcome-popup-widget.dart';
@@ -442,9 +443,16 @@ class _NewMainScreenState extends State<NewMainScreen> {
               icon: Icons.phone,
               title: 'Call Us',
               subtitle: '+91 9830464031',
-              onTap: () {
+              onTap: () async {
                 Get.back();
-                // Add phone call functionality
+                final uri = Uri(scheme: 'tel', path: '+919830464031');
+                if (!await launchUrl(uri)) {
+                  Get.snackbar(
+                    'Couldn\'t open dialer',
+                    'You can reach us at +91 9830464031',
+                    snackPosition: SnackPosition.BOTTOM,
+                  );
+                }
               },
             ),
             
@@ -452,9 +460,19 @@ class _NewMainScreenState extends State<NewMainScreen> {
               icon: Icons.message,
               title: 'WhatsApp',
               subtitle: 'Chat with us',
-              onTap: () {
+              onTap: () async {
                 Get.back();
-                // Add WhatsApp functionality
+                final message = Uri.encodeComponent(
+                    "Hi, I need help with my Sunder Garments order.");
+                final uri = Uri.parse(
+                    'https://wa.me/919830464031?text=$message');
+                if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+                  Get.snackbar(
+                    'Couldn\'t open WhatsApp',
+                    'Message us directly at +91 9830464031',
+                    snackPosition: SnackPosition.BOTTOM,
+                  );
+                }
               },
             ),
             
@@ -462,9 +480,20 @@ class _NewMainScreenState extends State<NewMainScreen> {
               icon: Icons.email,
               title: 'Email',
               subtitle: 'support@sundergarments.com',
-              onTap: () {
+              onTap: () async {
                 Get.back();
-                // Add email functionality
+                final uri = Uri(
+                  scheme: 'mailto',
+                  path: 'support@sundergarments.com',
+                  query: 'subject=${Uri.encodeComponent("Support request")}',
+                );
+                if (!await launchUrl(uri)) {
+                  Get.snackbar(
+                    'Couldn\'t open mail app',
+                    'Email us at support@sundergarments.com',
+                    snackPosition: SnackPosition.BOTTOM,
+                  );
+                }
               },
             ),
             

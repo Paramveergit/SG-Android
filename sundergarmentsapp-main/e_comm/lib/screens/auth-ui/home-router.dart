@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../admin-panel/admin-main-screen.dart';
 import '../auth-ui/sign-in-screen.dart';
@@ -29,8 +30,34 @@ class HomeRouter extends StatelessWidget {
       return const NewMainScreen();
     }
 
-    // Fallback to sign-in when Firestore has no user doc
-    return const SignInScreen();
+    // User is authenticated with Firebase but has no profile doc yet.
+    // This used to bounce them straight back to Sign-In, which looked
+    // like their account had vanished. Self-heal instead: create a
+    // minimal profile from what Firebase Auth already knows, then let
+    // them in. Covers slow writes, dropped connections, and old
+    // accounts created before this doc was required.
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+        'uId': user.uid,
+        'username': user.displayName ?? '',
+        'email': user.email ?? '',
+        'phone': user.phoneNumber ?? '',
+        'userImg': user.photoURL ?? '',
+        'userDeviceToken': '',
+        'country': '',
+        'userAddress': '',
+        'street': '',
+        'isAdmin': false,
+        'isActive': true,
+        'createdOn': DateTime.now(),
+        'city': '',
+      }, SetOptions(merge: true));
+      return const NewMainScreen();
+    } catch (_) {
+      // Firestore is genuinely unreachable (offline, etc.) — only now
+      // is Sign-In actually the right fallback.
+      return const SignInScreen();
+    }
   }
 
   @override
