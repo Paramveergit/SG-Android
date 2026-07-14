@@ -19,24 +19,24 @@ class HomeRouter extends StatelessWidget {
       return const SignInScreen();
     }
 
-    // Use existing controller to keep logic consistent with SplashScreen
-    final GetUserDataController getUserDataController = Get.put(GetUserDataController());
-    final userData = await getUserDataController.getUserData(user.uid);
-
-    if (userData != null && userData.isNotEmpty) {
-      if (userData[0]['isAdmin'] == true) {
-        return const AdminMainScreen();
-      }
-      return const NewMainScreen();
-    }
-
-    // User is authenticated with Firebase but has no profile doc yet.
-    // This used to bounce them straight back to Sign-In, which looked
-    // like their account had vanished. Self-heal instead: create a
-    // minimal profile from what Firebase Auth already knows, then let
-    // them in. Covers slow writes, dropped connections, and old
-    // accounts created before this doc was required.
     try {
+      // Use existing controller to keep logic consistent with SplashScreen
+      final GetUserDataController getUserDataController = Get.put(GetUserDataController());
+      final userData = await getUserDataController.getUserData(user.uid);
+
+      if (userData.isNotEmpty) {
+        if (userData[0]['isAdmin'] == true) {
+          return const AdminMainScreen();
+        }
+        return const NewMainScreen();
+      }
+
+      // User is authenticated with Firebase but has no profile doc yet.
+      // This used to bounce them straight back to Sign-In, which looked
+      // like their account had vanished. Self-heal instead: create a
+      // minimal profile from what Firebase Auth already knows, then let
+      // them in. Covers slow writes, dropped connections, and old
+      // accounts created before this doc was required.
       await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
         'uId': user.uid,
         'username': user.displayName ?? '',
@@ -54,8 +54,9 @@ class HomeRouter extends StatelessWidget {
       }, SetOptions(merge: true));
       return const NewMainScreen();
     } catch (_) {
-      // Firestore is genuinely unreachable (offline, etc.) — only now
-      // is Sign-In actually the right fallback.
+      // Anything failing anywhere above (network issue, permissions,
+      // Firestore unreachable, etc.) - fall back to Sign-In rather than
+      // stranding the user on a blank screen forever.
       return const SignInScreen();
     }
   }
