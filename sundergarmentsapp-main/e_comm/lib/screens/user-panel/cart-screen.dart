@@ -11,7 +11,6 @@ import 'package:get/get.dart';
 import '../../controllers/cart-price-controller.dart';
 import '../../controllers/get-customer-device-token-controller.dart';
 import '../../services/place-order-service.dart';
-import 'checkout-screen.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});

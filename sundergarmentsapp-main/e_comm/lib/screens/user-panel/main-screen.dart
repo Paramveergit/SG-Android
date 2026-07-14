@@ -12,7 +12,6 @@ import 'package:get/get.dart';
 import '../../utils/app-constant.dart';
 import '../../widgets/all-products-widget.dart';
 import '../../widgets/banner-widget.dart';
-import '../../widgets/fallback-banner-widget.dart';
 import '../../widgets/category-widget.dart';
 import '../../widgets/custom-drawer-widget.dart';
 import '../../widgets/flash-sale-widget.dart';
