@@ -146,23 +146,35 @@ class _SplashScreenState extends State<SplashScreen>
     final GetUserDataController getUserDataController =
         Get.put(GetUserDataController());
 
-    if (user != null) {
-      // Fetch user data from Firestore
-      var userData = await getUserDataController.getUserData(user!.uid);
+    try {
+      if (user != null) {
+        // Fetch user data from Firestore
+        var userData = await getUserDataController.getUserData(user!.uid);
 
-      // Check if userData is not empty before accessing elements
-      if (userData != null && userData.isNotEmpty) {
-        if (userData[0]['isAdmin'] == true) {
-          Get.offAll(() => AdminMainScreen());
+        // Check if userData is not empty before accessing elements
+        if (userData.isNotEmpty) {
+          if (userData[0]['isAdmin'] == true) {
+            Get.offAll(() => AdminMainScreen());
+          } else {
+            Get.offAll(() => NewMainScreen());
+          }
         } else {
-          Get.offAll(() => NewMainScreen());
+          // User exists in Firebase Auth but no data in Firestore, go to Sign-In
+          Get.offAll(() => SignInScreen());
         }
       } else {
-        // User exists in Firebase Auth but no data in Firestore, go to Sign-In
+        // No user logged in, go to Sign-In
         Get.offAll(() => SignInScreen());
       }
-    } else {
-      // No user logged in, go to Sign-In
+    } catch (e) {
+      // Don't leave the user stuck on the splash screen forever if
+      // anything above fails (network issue, permissions, etc.) - fall
+      // back to sign-in so they can at least retry.
+      Get.snackbar(
+        "Something went wrong",
+        "Please try signing in again. ($e)",
+        snackPosition: SnackPosition.BOTTOM,
+      );
       Get.offAll(() => SignInScreen());
     }
   }
