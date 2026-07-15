@@ -84,30 +84,44 @@ class GoogleSignInController extends GetxController {
         print("Firebase User obtained: ${user?.email}");
 
         if (user != null) {
-          // Create user model with proper null safety
-          UserModel userModel = UserModel(
-            uId: user.uid,
-            username: user.displayName ?? 'User',
-            email: user.email ?? '',
-            phone: user.phoneNumber ?? '',
-            userImg: user.photoURL ?? '',
-            userDeviceToken: getDeviceTokenController.deviceToken.toString(),
-            country: '',
-            userAddress: '',
-            street: '',
-            isAdmin: false,
-            isActive: true,
-            createdOn: DateTime.now(),
-            city: '',
-          );
+          // CRITICAL: check whether this account already has a profile
+          // before writing anything. The old code unconditionally
+          // overwrote the entire user document on every single sign-in -
+          // including admin accounts, whose isAdmin flag got silently
+          // wiped back to false, and existing customers, whose saved
+          // address/phone/city got wiped back to blank every time they
+          // signed in again. Only genuinely new accounts get a fresh
+          // profile; existing accounts are left untouched apart from a
+          // lightweight device-token refresh.
+          final userDocRef =
+              FirebaseFirestore.instance.collection('users').doc(user.uid);
+          final existingDoc = await userDocRef.get();
 
-          // Save user data to Firestore
-          print("Saving user data to Firestore...");
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(user.uid)
-              .set(userModel.toJson());
-          print("User data saved to Firestore for UID: ${user.uid}");
+          if (existingDoc.exists) {
+            print("Existing user signed in - preserving saved profile data");
+            await userDocRef.set({
+              'userDeviceToken': getDeviceTokenController.deviceToken.toString(),
+            }, SetOptions(merge: true));
+          } else {
+            print("New user - creating profile");
+            UserModel userModel = UserModel(
+              uId: user.uid,
+              username: user.displayName ?? 'User',
+              email: user.email ?? '',
+              phone: user.phoneNumber ?? '',
+              userImg: user.photoURL ?? '',
+              userDeviceToken: getDeviceTokenController.deviceToken.toString(),
+              country: '',
+              userAddress: '',
+              street: '',
+              isAdmin: false,
+              isActive: true,
+              createdOn: DateTime.now(),
+              city: '',
+            );
+            await userDocRef.set(userModel.toJson());
+          }
+          print("User data handled for UID: ${user.uid}");
           
           EasyLoading.dismiss();
           // Route through centralized home router for consistency

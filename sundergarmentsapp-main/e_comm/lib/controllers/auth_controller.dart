@@ -124,10 +124,26 @@ class AuthController extends GetxController {
   Future<void> _updateUserData(UserModel userModel) async {
     try {
       debugPrint('Updating user data in Firestore');
-      await _firestore
-          .collection('users')
-          .doc(userModel.uId)
-          .set(userModel.toJson(), SetOptions(merge: true));
+      final docRef = _firestore.collection('users').doc(userModel.uId);
+      final existingDoc = await docRef.get();
+
+      if (existingDoc.exists) {
+        // CRITICAL: never overwrite an existing profile's isAdmin status
+        // or saved address/phone/city with this model's defaults.
+        // merge:true alone doesn't protect these fields, since toJson()
+        // always includes them (e.g. isAdmin defaults to false on this
+        // freshly-constructed model) - merge only preserves fields that
+        // are ABSENT from the payload, and these are always present.
+        // Only refresh the lightweight identity fields that are safe to
+        // update on every sign-in.
+        await docRef.set({
+          'username': userModel.username,
+          'email': userModel.email,
+          'userImg': userModel.userImg,
+        }, SetOptions(merge: true));
+      } else {
+        await docRef.set(userModel.toJson(), SetOptions(merge: true));
+      }
       debugPrint('User data updated successfully');
     } catch (e) {
       debugPrint('Error updating user data: $e');
