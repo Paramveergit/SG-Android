@@ -8,6 +8,7 @@ import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../../utils/app-constant.dart';
 import '../../models/order-model.dart';
+import '../../repositories/order-repository.dart';
 import '../auth-ui/welcome-screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -19,6 +20,7 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final User? user = FirebaseAuth.instance.currentUser;
+  final OrderRepository orderRepository = OrderRepository();
 
   @override
   Widget build(BuildContext context) {
@@ -128,19 +130,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 16.0),
           
           // Order Count Only
-          StreamBuilder<QuerySnapshot>(
+          StreamBuilder<List<OrderModel>>(
             stream: user != null
-              ? FirebaseFirestore.instance
-                  .collection('orders')
-                  .doc(user!.uid)
-                  .collection('confirmOrders')
-                  .snapshots()
+              ? orderRepository.streamOrdersForCustomer(user!.uid)
               : null,
             builder: (context, snapshot) {
               int orderCount = 0;
               
               if (snapshot.hasData && snapshot.data != null) {
-                orderCount = snapshot.data!.docs.length;
+                orderCount = snapshot.data!.length;
               }
               
               return _buildStatItem(
@@ -233,16 +231,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           
           const SizedBox(height: 20.0),
           
-          // Orders List - Fixed to query correct structure
-          StreamBuilder<QuerySnapshot>(
+          // Orders List
+          StreamBuilder<List<OrderModel>>(
             stream: user != null
-              ? FirebaseFirestore.instance
-                  .collection('orders')
-                  .doc(user!.uid)
-                  .collection('confirmOrders')
-                  .orderBy('createdAt', descending: true)
-                  .limit(5)
-                  .snapshots()
+              ? orderRepository.streamOrdersForCustomer(user!.uid, limit: 5)
               : null,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
@@ -256,14 +248,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 );
               }
 
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              if (!snapshot.hasData || snapshot.data!.isEmpty) {
                 return _buildEmptyOrderState();
               }
 
               return Column(
-                children: snapshot.data!.docs.map((doc) {
-                  final orderData = doc.data() as Map<String, dynamic>;
-                  return _buildOrderItem(orderData);
+                children: snapshot.data!.map((order) {
+                  return _buildOrderItem(order);
                 }).toList(),
               );
             },
@@ -313,7 +304,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildOrderItem(Map<String, dynamic> orderData) {
+  Widget _buildOrderItem(OrderModel order) {
+    final displayNumber = order.orderNumber.isNotEmpty
+        ? order.orderNumber
+        : (order.orderId.length >= 8
+            ? order.orderId.substring(0, 8)
+            : order.orderId);
     return Container(
       margin: const EdgeInsets.only(bottom: 12.0),
       padding: const EdgeInsets.all(16.0),
@@ -345,7 +341,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Order #${orderData['productId']?.toString().substring(0, 8) ?? 'Unknown'}',
+                  'Order #$displayNumber',
                   style: const TextStyle(
                     fontSize: 14.0,
                     fontWeight: FontWeight.bold,
@@ -354,7 +350,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 4.0),
                 Text(
-                  'Status: ${_getStatusText(orderData['status'] ?? 0)}',
+                  'Status: ${order.status.label}',
                   style: TextStyle(
                     fontSize: 12.0,
                     color: Colors.grey.shade600,
@@ -364,7 +360,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           Text(
-            '₹${orderData['productTotalPrice']?.toString() ?? '0'}',
+            '₹${order.total.toStringAsFixed(2)}',
             style: const TextStyle(
               fontSize: 14.0,
               fontWeight: FontWeight.bold,
@@ -374,19 +370,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
     );
-  }
-
-  String _getStatusText(int status) {
-    switch (status) {
-      case 0:
-        return 'Processing';
-      case 1:
-        return 'Delivered';
-      case 2:
-        return 'Cancelled';
-      default:
-        return 'Unknown';
-    }
   }
 
   Widget _buildAccountActions() {
