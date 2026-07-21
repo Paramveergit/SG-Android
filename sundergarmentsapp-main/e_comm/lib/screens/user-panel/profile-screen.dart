@@ -8,6 +8,7 @@ import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../../utils/app-constant.dart';
 import '../../models/order-model.dart';
+import '../../models/order-status.dart';
 import '../../repositories/order-repository.dart';
 import '../auth-ui/welcome-screen.dart';
 

@@ -23,6 +23,20 @@ class TransporterDetailsModel {
     this.remarks,
   });
 
+  Map<String, dynamic> toMap() {
+    return {
+      'transporterName': transporterName,
+      'awbNumber': awbNumber,
+      'consignmentNumber': consignmentNumber,
+      'lrNumber': lrNumber,
+      'transportCompany': transportCompany,
+      'dispatchDate': dispatchDate,
+      'estimatedDeliveryDate': estimatedDeliveryDate,
+      'trackingUrl': trackingUrl,
+      'remarks': remarks,
+    };
+  }
+
   factory TransporterDetailsModel.fromMap(Map<String, dynamic> json) {
     return TransporterDetailsModel(
       transporterName: json['transporterName']?.toString() ?? '',
