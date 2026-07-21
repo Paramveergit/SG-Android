@@ -6,8 +6,6 @@ import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:get/get.dart';
 import '../models/user-model.dart';
 import '../services/auth/google_auth_service.dart';
-import '../services/auth/web_oauth_service.dart';
-import '../services/auth/direct_auth_service.dart';
 import '../services/auth/email_auth_service.dart';
 import '../screens/user-panel/new-main-screen.dart';
 import '../screens/auth-ui/home-router.dart';
@@ -16,8 +14,6 @@ class AuthController extends GetxController {
   static AuthController get instance => Get.find();
 
   final GoogleAuthService _googleAuthService = GoogleAuthService();
-  final WebOAuthService _webOAuthService = WebOAuthService();
-  final DirectAuthService _directAuthService = DirectAuthService();
   final EmailAuthService _emailAuthService = EmailAuthService();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   
@@ -35,43 +31,21 @@ class AuthController extends GetxController {
       _error.value = null;
       EasyLoading.show(status: 'Signing in...');
 
-      // Try direct Firebase auth first
-      UserCredential? userCredential;
-      try {
-        userCredential = await _directAuthService.signInWithGoogle();
-      } catch (e) {
-        debugPrint('Direct auth failed, trying web OAuth flow: $e');
-        try {
-          userCredential = await _webOAuthService.signInWithGoogle(Get.context!);
-        } catch (e) {
-          debugPrint('Web OAuth failed, trying native flow: $e');
-          // Fall back to native flow if all else fails
-          userCredential = await _googleAuthService.signInWithGoogle();
-        }
-      }
-      
+      // Single canonical Google sign-in path - see GoogleAuthService for
+      // why this must never go back to trying multiple OAuth flows.
+      // GoogleAuthService also handles the Firestore profile write, so
+      // there is exactly one place that creates/updates a user document
+      // on Google sign-in.
+      final userCredential = await _googleAuthService.signInWithGoogle();
+
       if (userCredential?.user == null) {
         debugPrint('Sign in cancelled or failed');
         EasyLoading.showError('Sign in cancelled');
         return;
       }
 
-      final user = userCredential!.user!;
-      debugPrint('Creating user model for: ${user.email}');
-
-      // Create or update user document
-      final userModel = UserModel(
-        uId: user.uid,
-        username: user.displayName ?? 'User',
-        email: user.email ?? '',
-        phone: user.phoneNumber ?? '',
-        userImg: user.photoURL ?? '',
-        createdOn: DateTime.now(),
-      );
-
-      await _updateUserData(userModel);
-      
-      EasyLoading.showSuccess('Welcome ${userModel.username}!');
+      EasyLoading.showSuccess(
+          'Welcome ${userCredential!.user!.displayName ?? "back"}!');
       // Centralize routing to maintain backward compatibility
       Get.offAll(() => HomeRouter());
       
