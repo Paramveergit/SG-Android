@@ -27,7 +27,14 @@ class _HomeRouterState extends State<HomeRouter> {
   }
 
   Future<_RouteResult> _decideNext() async {
-    final User? user = FirebaseAuth.instance.currentUser;
+    // FIX: FirebaseAuth.instance.currentUser is a synchronous snapshot
+    // that can genuinely be null for a moment on app cold start, before
+    // Firebase finishes restoring the persisted session from local
+    // storage. Checking it immediately - as this code used to - can
+    // wrongly conclude "not signed in" and bounce to Sign-In even
+    // though a valid session exists a beat later. Waiting for the
+    // first real auth-state event removes that race entirely.
+    final User? user = await FirebaseAuth.instance.authStateChanges().first;
     if (user == null) {
       return _RouteResult.widget(const SignInScreen());
     }
