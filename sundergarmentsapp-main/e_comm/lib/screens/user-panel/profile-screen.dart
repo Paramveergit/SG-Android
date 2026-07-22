@@ -136,6 +136,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ? orderRepository.streamOrdersForCustomer(user!.uid)
               : null,
             builder: (context, snapshot) {
+              // FIX: this used to only check hasData, so a genuine
+              // Firestore error (permission, missing index, etc.) on
+              // this account's orders query silently displayed as "0"
+              // - indistinguishable from actually having zero orders.
+              if (snapshot.hasError) {
+                debugPrint('Order count stream error: ${snapshot.error}');
+                return _buildStatItem(
+                  icon: Icons.error_outline,
+                  label: 'Orders',
+                  value: '!',
+                );
+              }
+
               int orderCount = 0;
               
               if (snapshot.hasData && snapshot.data != null) {
@@ -249,6 +262,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 );
               }
 
+              // FIX: this used to only check hasData, so a genuine
+              // Firestore error on this account's orders query (missing
+              // index, permission denial, etc.) silently rendered the
+              // exact same "No orders found!" UI as a truly empty
+              // account - indistinguishable to the user, and to us
+              // debugging it. Show the real error instead.
+              if (snapshot.hasError) {
+                return _buildOrderErrorState(snapshot.error.toString());
+              }
+
               if (!snapshot.hasData || snapshot.data!.isEmpty) {
                 return _buildEmptyOrderState();
               }
@@ -259,6 +282,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 }).toList(),
               );
             },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOrderErrorState(String error) {
+    return Container(
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20.0),
+            decoration: BoxDecoration(
+              color: Colors.red.shade50,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.error_outline,
+              size: 48.0,
+              color: Colors.red.shade400,
+            ),
+          ),
+          const SizedBox(height: 16.0),
+          const Text(
+            'Could not load your orders',
+            style: TextStyle(
+              fontSize: 18.0,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 8.0),
+          // Shown deliberately, not logged-only: this text is what lets
+          // us actually diagnose the real cause instead of guessing.
+          // Screenshot/copy this if you're reporting the bug.
+          SelectableText(
+            error,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12.0,
+              color: Colors.grey.shade700,
+            ),
           ),
         ],
       ),
