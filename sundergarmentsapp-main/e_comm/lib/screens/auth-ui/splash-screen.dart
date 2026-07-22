@@ -22,8 +22,18 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
-  User? user = FirebaseAuth.instance.currentUser;
-  
+  // FIX: this used to be `User? user = FirebaseAuth.instance.currentUser;`
+  // - a synchronous snapshot captured the instant this widget was
+  // created, before Firebase had a chance to restore the persisted
+  // session from local storage. Even though several seconds of splash
+  // animation pass before this value is actually used below, the
+  // null-or-not verdict was already locked in at that first frozen
+  // instant. This is very likely why signing in never "stuck" - every
+  // cold start could see null here even with a perfectly valid session
+  // a moment away from being ready. No longer cached as a field; the
+  // real current value is fetched right when _navigateToNextScreen
+  // actually needs it, after authStateChanges() confirms Firebase has
+  // finished restoring (or genuinely has no) session.
   late AnimationController _textController;
   late AnimationController _logoController;
   late AnimationController _fadeController;
@@ -147,6 +157,10 @@ class _SplashScreenState extends State<SplashScreen>
         Get.put(GetUserDataController());
 
     try {
+      // Wait for Firebase's actual, settled auth state - not a
+      // snapshot taken before restoration finished.
+      final User? user = await FirebaseAuth.instance.authStateChanges().first;
+
       if (user != null) {
         // Fetch user data from Firestore
         var userData = await getUserDataController.getUserData(user!.uid);
