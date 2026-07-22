@@ -128,7 +128,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
           
-          const SizedBox(height: 16.0),
+          const SizedBox(height: 4.0),
+
+          // TEMPORARY DIAGNOSTIC - remove once the missing-orders issue
+          // is confirmed fixed. Shows the exact live session UID being
+          // used for the orders query, so it can be compared byte-for-
+          // byte against a specific order's customerId field instead of
+          // relying on a visual check.
+          if (user != null)
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 8.0),
+              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade50,
+                borderRadius: BorderRadius.circular(8.0),
+                border: Border.all(color: Colors.amber.shade200),
+              ),
+              child: SelectableText(
+                'Session UID: ${user!.uid}',
+                style: TextStyle(fontSize: 11.0, color: Colors.grey.shade800),
+              ),
+            ),
+
+          const SizedBox(height: 12.0),
           
           // Order Count Only
           StreamBuilder<List<OrderModel>>(
