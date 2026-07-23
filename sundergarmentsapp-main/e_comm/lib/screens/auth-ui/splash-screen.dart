@@ -10,7 +10,6 @@ import 'package:e_comm/utils/app-constant.dart';
 import 'package:e_comm/widgets/animated-logo-widget.dart';
 import 'package:e_comm/widgets/animated-text-widget.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -26,15 +25,10 @@ class _SplashScreenState extends State<SplashScreen>
   // FIX: this used to be `User? user = FirebaseAuth.instance.currentUser;`
   // - a synchronous snapshot captured the instant this widget was
   // created, before Firebase had a chance to restore the persisted
-  // session from local storage. Even though several seconds of splash
-  // animation pass before this value is actually used below, the
-  // null-or-not verdict was already locked in at that first frozen
-  // instant. This is very likely why signing in never "stuck" - every
-  // cold start could see null here even with a perfectly valid session
-  // a moment away from being ready. No longer cached as a field; the
-  // real current value is fetched right when _navigateToNextScreen
-  // actually needs it, after authStateChanges() confirms Firebase has
-  // finished restoring (or genuinely has no) session.
+  // session from local storage. No longer cached as a field; the real
+  // current value is fetched right when _navigateToNextScreen actually
+  // needs it, after authStateChanges() confirms Firebase's settled state.
+
   late AnimationController _textController;
   late AnimationController _logoController;
   late AnimationController _fadeController;
@@ -157,74 +151,14 @@ class _SplashScreenState extends State<SplashScreen>
     final GetUserDataController getUserDataController =
         Get.put(GetUserDataController());
 
-    // TEMPORARY DIAGNOSTIC - pinpointing why sign-in doesn't persist.
-    // Gathers every relevant signal and shows them on screen, paused,
-    // so it can be read/screenshotted instead of flashing past.
-    final diagnostics = <String>[];
-    User? syncUser;
-    User? awaitedUser;
-    bool googleSignedIn = false;
-    String? googleEmail;
-    String getUserDataResult = 'not attempted';
-
     try {
-      syncUser = FirebaseAuth.instance.currentUser;
-      diagnostics.add('currentUser (sync): ${syncUser?.uid ?? "null"}');
-    } catch (e) {
-      diagnostics.add('currentUser (sync) threw: $e');
-    }
+      // Wait for Firebase's actual, settled auth state - not a
+      // snapshot taken before restoration finished.
+      final User? user = await FirebaseAuth.instance.authStateChanges().first;
 
-    try {
-      awaitedUser = await FirebaseAuth.instance.authStateChanges().first
-          .timeout(const Duration(seconds: 5));
-      diagnostics.add('authStateChanges first: ${awaitedUser?.uid ?? "null"}');
-    } catch (e) {
-      diagnostics.add('authStateChanges threw/timed out: $e');
-    }
-
-    try {
-      final GoogleSignIn googleSignIn = GoogleSignIn();
-      googleSignedIn = await googleSignIn.isSignedIn();
-      final account = googleSignIn.currentUser;
-      googleEmail = account?.email;
-      diagnostics.add('GoogleSignIn.isSignedIn: $googleSignedIn (${googleEmail ?? "no cached account"})');
-    } catch (e) {
-      diagnostics.add('GoogleSignIn check threw: $e');
-    }
-
-    final User? user = awaitedUser ?? syncUser;
-
-    if (user != null) {
-      try {
-        var userData = await getUserDataController.getUserData(user.uid);
-        getUserDataResult = userData.isNotEmpty
-            ? 'found profile, isAdmin=${userData[0]['isAdmin']}'
-            : 'NO profile doc found for this uid';
-      } catch (e) {
-        getUserDataResult = 'threw: $e';
-      }
-    } else {
-      getUserDataResult = 'skipped - user is null';
-    }
-    diagnostics.add('getUserData: $getUserDataResult');
-
-    if (!mounted) return;
-
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => _DiagnosticScreen(
-          lines: diagnostics,
-          onContinue: () {
-            Navigator.of(context).pop();
-          },
-        ),
-      ),
-    );
-
-    try {
       if (user != null) {
         // Fetch user data from Firestore
-        var userData = await getUserDataController.getUserData(user!.uid);
+        var userData = await getUserDataController.getUserData(user.uid);
 
         // Check if userData is not empty before accessing elements
         if (userData.isNotEmpty) {
@@ -328,66 +262,6 @@ class _SplashScreenState extends State<SplashScreen>
                 },
               ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-/// TEMPORARY DIAGNOSTIC SCREEN - remove once the login-persistence
-/// bug is found and fixed. Shows every auth-related signal gathered
-/// in _navigateToNextScreen, paused with a manual "Continue" button
-/// so it can actually be read and screenshotted.
-class _DiagnosticScreen extends StatelessWidget {
-  final List<String> lines;
-  final VoidCallback onContinue;
-
-  const _DiagnosticScreen({
-    required this.lines,
-    required this.onContinue,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Auth Diagnostic',
-                style: TextStyle(
-                  color: Colors.amber,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: SingleChildScrollView(
-                  child: SelectableText(
-                    lines.map((l) => '• $l').join('\n\n'),
-                    style: const TextStyle(
-                      color: Colors.greenAccent,
-                      fontSize: 13,
-                      fontFamily: 'monospace',
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: onContinue,
-                  child: const Text('Continue'),
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );
