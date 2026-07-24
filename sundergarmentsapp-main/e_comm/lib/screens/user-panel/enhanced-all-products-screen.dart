@@ -303,20 +303,24 @@ class _EnhancedAllProductsScreenState extends State<EnhancedAllProductsScreen> {
           itemBuilder: (context, index) {
             final productData = products[index].data() as Map<String, dynamic>;
             
-            final productModel = ProductModel(
-              productId: productData['productId'] ?? '',
-              categoryId: productData['categoryId'] ?? '',
-              productName: productData['productName'] ?? '',
-              categoryName: productData['categoryName'] ?? '',
-              salePrice: productData['salePrice'] ?? '',
-              fullPrice: productData['fullPrice'] ?? '',
-              productImages: List<String>.from(productData['productImages'] ?? []),
-              deliveryTime: productData['deliveryTime'] ?? '',
-              isSale: productData['isSale'] ?? false,
-              productDescription: productData['productDescription'] ?? '',
-              createdAt: productData['createdAt'],
-              updatedAt: productData['updatedAt'],
-            );
+            // Switched to fromMap so this picks up fabric/moq/variants
+            // like every other product list screen now does - preserving
+            // the same null-safety this screen had by pre-sanitizing the
+            // map before handing it to fromMap.
+            final safeProductData = <String, dynamic>{
+              ...productData,
+              'productId': productData['productId'] ?? '',
+              'categoryId': productData['categoryId'] ?? '',
+              'productName': productData['productName'] ?? '',
+              'categoryName': productData['categoryName'] ?? '',
+              'salePrice': productData['salePrice'] ?? '',
+              'fullPrice': productData['fullPrice'] ?? '',
+              'productImages': List<String>.from(productData['productImages'] ?? []),
+              'deliveryTime': productData['deliveryTime'] ?? '',
+              'isSale': productData['isSale'] ?? false,
+              'productDescription': productData['productDescription'] ?? '',
+            };
+            final productModel = ProductModel.fromMap(safeProductData);
 
             return SimpleProductCard(
               product: productModel,
