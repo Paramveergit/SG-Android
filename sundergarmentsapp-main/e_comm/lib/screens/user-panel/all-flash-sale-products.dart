@@ -72,20 +72,7 @@ class _AllFlashSaleProductScreenState extends State<AllFlashSaleProductScreen> {
               ),
               itemBuilder: (context, index) {
                 final productData = snapshot.data!.docs[index];
-                ProductModel productModel = ProductModel(
-                  productId: productData['productId'],
-                  categoryId: productData['categoryId'],
-                  productName: productData['productName'],
-                  categoryName: productData['categoryName'],
-                  salePrice: productData['salePrice'],
-                  fullPrice: productData['fullPrice'],
-                  productImages: productData['productImages'],
-                  deliveryTime: productData['deliveryTime'],
-                  isSale: productData['isSale'],
-                  productDescription: productData['productDescription'],
-                  createdAt: productData['createdAt'],
-                  updatedAt: productData['updatedAt'],
-                );
+                ProductModel productModel = ProductModel.fromMap(productData);
 
                 // CategoriesModel categoriesModel = CategoriesModel(
                 //   categoryId: snapshot.data!.docs[index]['categoryId'],
