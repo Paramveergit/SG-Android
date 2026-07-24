@@ -71,7 +71,7 @@ class _AllFlashSaleProductScreenState extends State<AllFlashSaleProductScreen> {
                 childAspectRatio: 0.80,
               ),
               itemBuilder: (context, index) {
-                final productData = snapshot.data!.docs[index];
+                final productData = snapshot.data!.docs[index].data() as Map<String, dynamic>;
                 ProductModel productModel = ProductModel.fromMap(productData);
 
                 // CategoriesModel categoriesModel = CategoriesModel(
