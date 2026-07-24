@@ -94,20 +94,7 @@ class AllProductsScreen extends StatelessWidget {
 
   Widget _buildProductItem(BuildContext context, int index, List<QueryDocumentSnapshot> docs) {
     final productData = docs[index];
-    ProductModel productModel = ProductModel(
-      productId: productData['productId'],
-      categoryId: productData['categoryId'],
-      productName: productData['productName'],
-      categoryName: productData['categoryName'],
-      salePrice: productData['salePrice'],
-      fullPrice: productData['fullPrice'],
-      productImages: productData['productImages'],
-      deliveryTime: productData['deliveryTime'],
-      isSale: productData['isSale'],
-      productDescription: productData['productDescription'],
-      createdAt: productData['createdAt'],
-      updatedAt: productData['updatedAt'],
-    );
+    ProductModel productModel = ProductModel.fromMap(productData);
 
     return Row(
       children: [
