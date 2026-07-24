@@ -103,6 +103,70 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
     };
   }
   
+  // Build a proper specs section from the actual structured fields the
+  // admin app saves (fabric, moq, and size/color living per-variant) -
+  // this used to only ever try to parse "QTY:...|SIZE:..." patterns out
+  // of the free-text description, which never matched how products are
+  // actually entered via the current Admin App. That's why nothing but
+  // possibly a stray sentence ever showed here, even for products with
+  // fabric/size/color/MOQ correctly saved.
+  Widget _buildSpecsTable() {
+    final product = widget.productModel;
+    final variants = product.variants;
+    final sizes = variants.map((v) => v.size).where((s) => s.isNotEmpty).toSet().toList();
+    final colors = variants.map((v) => v.color).where((c) => c.isNotEmpty).toSet().toList();
+
+    final rows = <MapEntry<String, String>>[];
+    if (sizes.isNotEmpty) rows.add(MapEntry('Size', sizes.join(', ')));
+    if (product.fabric.isNotEmpty) rows.add(MapEntry('Fabric', product.fabric));
+    if (colors.isNotEmpty) rows.add(MapEntry('Color', colors.join(', ')));
+    if (product.moq > 0) rows.add(MapEntry('MOQ', '${product.moq} pcs'));
+    if (product.deliveryTime.isNotEmpty) {
+      rows.add(MapEntry('Delivery Time', product.deliveryTime));
+    }
+
+    if (rows.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8.0),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(8.0),
+      ),
+      child: Column(
+        children: rows.asMap().entries.map((entry) {
+          final i = entry.key;
+          final row = entry.value;
+          return Container(
+            color: i.isEven ? Colors.grey.shade50 : Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 110,
+                  child: Text(
+                    row.key,
+                    style: TextStyle(
+                      fontSize: 13.0,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    row.value,
+                    style: TextStyle(fontSize: 13.0, color: Colors.grey.shade700),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
   // Build product details widget with proper formatting
   Widget _buildProductDetails() {
     Map<String, String> parsedDetails = _parseProductDescription(widget.productModel.productDescription);
