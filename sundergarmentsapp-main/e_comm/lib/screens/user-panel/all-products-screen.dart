@@ -93,7 +93,7 @@ class AllProductsScreen extends StatelessWidget {
   }
 
   Widget _buildProductItem(BuildContext context, int index, List<QueryDocumentSnapshot> docs) {
-    final productData = docs[index];
+    final productData = docs[index].data() as Map<String, dynamic>;
     ProductModel productModel = ProductModel.fromMap(productData);
 
     return Row(
