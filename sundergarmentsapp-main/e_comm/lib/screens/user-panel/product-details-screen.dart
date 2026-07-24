@@ -661,6 +661,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
                           ],
                         ),
                       ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(8.0, 0.0, 8.0, 4.0),
+                        child: _buildSpecsTable(),
+                      ),
                       // Product details (Quantity, Size, Description)
                       Padding(
                         padding: const EdgeInsets.fromLTRB(8.0, 0.0, 8.0, 4.0),
