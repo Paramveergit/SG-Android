@@ -135,7 +135,7 @@ class ModernComponentsExample extends StatelessWidget {
           ),
           itemCount: snapshot.data!.docs.length,
           itemBuilder: (context, index) {
-            final productData = snapshot.data!.docs[index];
+            final productData = snapshot.data!.docs[index].data() as Map<String, dynamic>;
             
             ProductModel productModel = ProductModel.fromMap(productData);
             
