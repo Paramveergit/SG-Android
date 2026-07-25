@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/order-model.dart';
 import '../../models/order-status.dart';
+import '../../models/transporter-details-model.dart';
 import '../../utils/app-constant.dart';
 
 /// Read-only order detail view for the customer's own order - the one
@@ -267,7 +268,7 @@ class _DeliveryAddressCard extends StatelessWidget {
 }
 
 class _TransporterCard extends StatelessWidget {
-  final dynamic transporter;
+  final TransporterDetailsModel transporter;
   const _TransporterCard({required this.transporter});
 
   Widget _row(String label, String? value) {
@@ -295,19 +296,19 @@ class _TransporterCard extends StatelessWidget {
     return _SectionCard(
       title: 'Shipment tracking',
       children: [
-        _row('Transporter', t.transporterName as String?),
-        _row('Company', t.transportCompany as String?),
-        _row('AWB Number', t.awbNumber as String?),
-        _row('Consignment No.', t.consignmentNumber as String?),
-        if (t.remarks != null && (t.remarks as String).isNotEmpty)
-          _row('Remarks', t.remarks as String?),
-        if (t.trackingUrl != null && (t.trackingUrl as String).isNotEmpty) ...[
+        _row('Transporter', t.transporterName),
+        _row('Company', t.transportCompany),
+        _row('AWB Number', t.awbNumber),
+        _row('Consignment No.', t.consignmentNumber),
+        if (t.remarks != null && t.remarks!.isNotEmpty)
+          _row('Remarks', t.remarks),
+        if (t.trackingUrl != null && t.trackingUrl!.isNotEmpty) ...[
           const SizedBox(height: 8.0),
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
               onPressed: () async {
-                final uri = Uri.tryParse(t.trackingUrl as String);
+                final uri = Uri.tryParse(t.trackingUrl!);
                 if (uri != null && await canLaunchUrl(uri)) {
                   await launchUrl(uri, mode: LaunchMode.externalApplication);
                 }
