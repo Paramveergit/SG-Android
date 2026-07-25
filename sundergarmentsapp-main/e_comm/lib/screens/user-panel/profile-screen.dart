@@ -10,6 +10,7 @@ import '../../utils/app-constant.dart';
 import '../../models/order-model.dart';
 import '../../models/order-status.dart';
 import '../../repositories/order-repository.dart';
+import 'order-detail-screen.dart';
 import '../auth-ui/welcome-screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -377,7 +378,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         : (order.orderId.length >= 8
             ? order.orderId.substring(0, 8)
             : order.orderId);
-    return Container(
+    return InkWell(
+      borderRadius: BorderRadius.circular(12.0),
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => OrderDetailScreen(order: order),
+        ),
+      ),
+      child: Container(
       margin: const EdgeInsets.only(bottom: 12.0),
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
@@ -435,6 +443,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
         ],
+      ),
       ),
     );
   }
