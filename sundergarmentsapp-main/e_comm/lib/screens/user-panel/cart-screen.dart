@@ -56,16 +56,29 @@ class _CartScreenState extends State<CartScreen> {
       if (!doc.exists) return;
       final data = doc.data();
       if (data == null) return;
-      final savedName = (data['username'] as String?)?.trim();
-      final savedPhone = (data['phone'] as String?)?.trim();
-      final savedAddress = (data['userAddress'] as String?)?.trim();
-      if (savedName != null && savedName.isNotEmpty) {
+      // FIX: some accounts have "null" (the literal 4-character string,
+      // from an old ?.toString() call on an actually-null value) stored
+      // in Firestore instead of a genuinely empty value. isNotEmpty
+      // alone doesn't catch that - "null" is a non-empty string as far
+      // as Dart is concerned. Treat it the same as missing/empty so it
+      // never shows up pre-filled in a form.
+      String? clean(String? value) {
+        final v = value?.trim();
+        if (v == null || v.isEmpty) return null;
+        if (v.toLowerCase() == 'null') return null;
+        return v;
+      }
+
+      final savedName = clean(data['username'] as String?);
+      final savedPhone = clean(data['phone'] as String?);
+      final savedAddress = clean(data['userAddress'] as String?);
+      if (savedName != null) {
         nameController.text = savedName;
       }
-      if (savedPhone != null && savedPhone.isNotEmpty) {
+      if (savedPhone != null) {
         phoneController.text = savedPhone;
       }
-      if (savedAddress != null && savedAddress.isNotEmpty) {
+      if (savedAddress != null) {
         addressController.text = savedAddress;
       }
     } catch (e) {
