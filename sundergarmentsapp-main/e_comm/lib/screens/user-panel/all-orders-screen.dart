@@ -2,6 +2,7 @@
 import 'package:e_comm/models/order-model.dart';
 import 'package:e_comm/models/order-status.dart';
 import 'package:e_comm/repositories/order-repository.dart';
+import 'package:e_comm/screens/user-panel/order-detail-screen.dart';
 import 'package:e_comm/utils/app-constant.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
@@ -95,6 +96,11 @@ class _AllOrdersScreenState extends State<AllOrdersScreen> {
                       elevation: 5,
                       color: AppConstant.appTextColor,
                       child: ListTile(
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => OrderDetailScreen(order: order),
+                          ),
+                        ),
                         leading: CircleAvatar(
                           backgroundColor: AppConstant.appMainColor,
                           backgroundImage: (firstItem != null &&
