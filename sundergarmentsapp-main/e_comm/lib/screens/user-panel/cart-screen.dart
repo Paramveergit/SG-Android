@@ -34,6 +34,71 @@ class _CartScreenState extends State<CartScreen> {
   String? name;
   String? phone;
   String? address;
+
+  @override
+  void initState() {
+    super.initState();
+    _prefillFromSavedProfile();
+  }
+
+  // FIX: this used to ask for name/phone/address on every single order,
+  // even though the person is already signed in with a real account.
+  // Pre-fill from whatever's already saved on their profile, so most
+  // returning customers see the sheet already filled in and can just
+  // confirm instead of retyping the same details every time.
+  Future<void> _prefillFromSavedProfile() async {
+    if (user == null) return;
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user!.uid)
+          .get();
+      if (!doc.exists) return;
+      final data = doc.data();
+      if (data == null) return;
+      final savedName = (data['username'] as String?)?.trim();
+      final savedPhone = (data['phone'] as String?)?.trim();
+      final savedAddress = (data['userAddress'] as String?)?.trim();
+      if (savedName != null && savedName.isNotEmpty) {
+        nameController.text = savedName;
+      }
+      if (savedPhone != null && savedPhone.isNotEmpty) {
+        phoneController.text = savedPhone;
+      }
+      if (savedAddress != null && savedAddress.isNotEmpty) {
+        addressController.text = savedAddress;
+      }
+    } catch (e) {
+      // Non-fatal - if this fails, the sheet just opens blank like before.
+      print('Could not pre-fill checkout details: $e');
+    }
+  }
+
+  // Saves whatever the customer confirmed/typed back to their profile,
+  // so the NEXT order pre-fills too, even if this was their first time
+  // entering these details or they corrected something.
+  Future<void> _saveDetailsToProfile({
+    required String name,
+    required String phone,
+    required String address,
+  }) async {
+    if (user == null) return;
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(user!.uid).set(
+        {
+          'username': name,
+          'phone': phone,
+          'userAddress': address,
+        },
+        SetOptions(merge: true),
+      );
+    } catch (e) {
+      // Non-fatal - the order itself already succeeded by the time this
+      // runs; failing to save the profile shouldn't block the user.
+      print('Could not save checkout details to profile: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -604,6 +669,14 @@ class _CartScreenState extends State<CartScreen> {
                       customerPhone: phone!,
                       customerAddress: address!,
                       customerDeviceToken: customerToken!,
+                    );
+
+                    // Save these details for next time, so the sheet
+                    // pre-fills automatically on future orders.
+                    _saveDetailsToProfile(
+                      name: name!,
+                      phone: phone!,
+                      address: address!,
                     );
                   } else {
                     print("Fill The Details");
