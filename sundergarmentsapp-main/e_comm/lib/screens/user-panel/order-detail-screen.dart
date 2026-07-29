@@ -110,6 +110,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             const SizedBox(height: 12.0),
             _TransporterCard(transporter: order.transporterDetails!),
           ],
+          if (order.invoiceUrl != null) ...[
+            const SizedBox(height: 12.0),
+            _InvoiceCard(invoiceUrl: order.invoiceUrl!, orderNumber: order.orderNumber.isNotEmpty ? order.orderNumber : order.orderId),
+          ],
         ],
       ),
     );
@@ -402,6 +406,71 @@ class _TransporterCard extends StatelessWidget {
             ),
           ),
         ],
+      ],
+    );
+  }
+}
+
+/// Shows the invoice once the admin has attached one - a clean card
+/// with a document icon and a single, unambiguous action, matching the
+/// same visual language as the shipment tracking card above it.
+class _InvoiceCard extends StatelessWidget {
+  final String invoiceUrl;
+  final String orderNumber;
+
+  const _InvoiceCard({required this.invoiceUrl, required this.orderNumber});
+
+  @override
+  Widget build(BuildContext context) {
+    return _SectionCard(
+      title: 'Invoice',
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10.0),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(10.0),
+              ),
+              child: Icon(Icons.picture_as_pdf, color: Colors.green.shade700, size: 24.0),
+            ),
+            const SizedBox(width: 12.0),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Invoice_$orderNumber.pdf',
+                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.0),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2.0),
+                  Text('Tap to view or download', style: TextStyle(fontSize: 12.0, color: Colors.grey.shade600)),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12.0),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: () async {
+              final uri = Uri.tryParse(invoiceUrl);
+              if (uri != null && await canLaunchUrl(uri)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppConstant.appMainColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 12.0),
+            ),
+            icon: const Icon(Icons.download_outlined, size: 18.0),
+            label: const Text('View Invoice'),
+          ),
+        ),
       ],
     );
   }
