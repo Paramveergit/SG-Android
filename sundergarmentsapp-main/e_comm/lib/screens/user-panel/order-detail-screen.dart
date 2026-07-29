@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../models/order-model.dart';
 import '../../models/order-status.dart';
 import '../../models/transporter-details-model.dart';
+import '../../repositories/order-repository.dart';
 import '../../utils/app-constant.dart';
 
 /// Read-only order detail view for the customer's own order - the one
@@ -17,10 +18,48 @@ import '../../utils/app-constant.dart';
 /// summary. This shows: item breakdown, delivery address, current
 /// status against the full order lifecycle, and transporter/tracking
 /// info once the admin has added it.
-class OrderDetailScreen extends StatelessWidget {
+class OrderDetailScreen extends StatefulWidget {
   final OrderModel order;
 
   const OrderDetailScreen({super.key, required this.order});
+
+  @override
+  State<OrderDetailScreen> createState() => _OrderDetailScreenState();
+}
+
+class _OrderDetailScreenState extends State<OrderDetailScreen> {
+  final OrderRepository _orderRepository = OrderRepository();
+  late OrderModel order;
+  bool _isMarkingReceived = false;
+
+  @override
+  void initState() {
+    super.initState();
+    order = widget.order;
+  }
+
+  Future<void> _markAsReceived() async {
+    setState(() => _isMarkingReceived = true);
+    try {
+      await _orderRepository.markAsReceived(order.orderId);
+      setState(() {
+        order = order.copyWith(status: OrderStatus.delivered);
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Thanks for confirming!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not update: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isMarkingReceived = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,6 +77,31 @@ class OrderDetailScreen extends StatelessWidget {
         padding: const EdgeInsets.all(12.0),
         children: [
           _StatusProgressCard(order: order),
+          if (order.status == OrderStatus.shipped) ...[
+            const SizedBox(height: 12.0),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _isMarkingReceived ? null : _markAsReceived,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green.shade600,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14.0),
+                ),
+                icon: _isMarkingReceived
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation(Colors.white),
+                        ),
+                      )
+                    : const Icon(Icons.check_circle_outline),
+                label: Text(_isMarkingReceived ? 'Updating...' : "I've received this order"),
+              ),
+            ),
+          ],
           const SizedBox(height: 12.0),
           _ItemsCard(order: order),
           const SizedBox(height: 12.0),
@@ -111,15 +175,31 @@ class _StatusProgressCard extends StatelessWidget {
       );
     }
 
-    final steps = OrderStatus.values
-        .where((s) => s != OrderStatus.cancelled)
-        .toList();
+    // Same simplified 5-stage view as the admin app - New and Dispatched
+    // still exist as stored values for old orders, but aren't shown as
+    // their own step anymore. A leftover "Dispatched" order displays as
+    // if it's sitting right after Packed.
+    const visibleStages = [
+      OrderStatus.confirmed,
+      OrderStatus.processing,
+      OrderStatus.packed,
+      OrderStatus.shipped,
+      OrderStatus.delivered,
+    ];
+    int currentPosition = visibleStages.indexOf(order.status);
+    if (currentPosition == -1) {
+      currentPosition = order.status == OrderStatus.dispatched
+          ? visibleStages.indexOf(OrderStatus.packed)
+          : -1;
+    }
+    final steps = visibleStages;
 
     return _SectionCard(
       title: 'Order status',
       children: [
-        ...steps.map((s) {
-          final isDone = s.index <= order.status.index;
+        ...steps.asMap().entries.map((entry) {
+          final s = entry.value;
+          final isDone = entry.key <= currentPosition;
           final isCurrent = s == order.status;
           final isLast = s == steps.last;
           return Row(
