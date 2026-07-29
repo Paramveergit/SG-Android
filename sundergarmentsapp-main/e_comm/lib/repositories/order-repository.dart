@@ -73,6 +73,24 @@ class OrderRepository {
     return orderRef.id;
   }
 
+  /// The one and only status change a customer is allowed to make
+  /// themselves - confirming they've received a shipped order. Enforced
+  /// on the server by Firestore rules too (this client-side check is
+  /// just for a fast, clear error instead of a silent rules rejection).
+  Future<void> markAsReceived(String orderId) async {
+    await _ordersRef.doc(orderId).update({
+      'status': OrderStatus.delivered.index,
+      'updatedAt': DateTime.now(),
+      'statusHistory': FieldValue.arrayUnion([
+        OrderStatusHistoryEntry(
+          status: OrderStatus.delivered,
+          timestamp: DateTime.now(),
+          note: 'Marked as received by customer',
+        ).toMap(),
+      ]),
+    });
+  }
+
   /// Same sequential order number scheme as the admin app - shares the
   /// same counter document, so numbers stay sequential regardless of
   /// which app created the order.
