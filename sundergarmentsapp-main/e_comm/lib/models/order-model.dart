@@ -23,6 +23,7 @@ class OrderModel {
   final OrderStatus status;
   final List<OrderStatusHistoryEntry> statusHistory;
   final TransporterDetailsModel? transporterDetails;
+  final String? invoiceUrl;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -40,6 +41,7 @@ class OrderModel {
     required this.status,
     required this.statusHistory,
     this.transporterDetails,
+    this.invoiceUrl,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -59,6 +61,7 @@ class OrderModel {
       status: status ?? this.status,
       statusHistory: statusHistory,
       transporterDetails: transporterDetails,
+      invoiceUrl: invoiceUrl,
       createdAt: createdAt,
       updatedAt: updatedAt,
     );
@@ -80,6 +83,7 @@ class OrderModel {
       'isCancelled': status == OrderStatus.cancelled,
       'statusHistory': statusHistory.map((e) => e.toMap()).toList(),
       'transporterDetails': transporterDetails?.toMap(),
+      'invoiceUrl': invoiceUrl,
       'createdAt': createdAt,
       'updatedAt': updatedAt,
     };
@@ -139,6 +143,7 @@ class OrderModel {
           ? TransporterDetailsModel.fromMap(
               json['transporterDetails'] as Map<String, dynamic>)
           : null,
+      invoiceUrl: json['invoiceUrl']?.toString(),
       createdAt: _toDateTime(json['createdAt']) ?? DateTime.now(),
       updatedAt: _toDateTime(json['updatedAt']) ?? DateTime.now(),
     );
