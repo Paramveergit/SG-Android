@@ -1,11 +1,15 @@
 // New Main Screen with Navigation Cards - No Sidebar
 // Implements modern card-based navigation as requested
 
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../models/order-model.dart';
+import '../../models/order-status.dart';
+import '../../repositories/order-repository.dart';
 import '../../utils/app-constant.dart';
 import '../../widgets/banner-widget.dart';
 import '../../widgets/welcome-popup-widget.dart';
@@ -13,6 +17,7 @@ import '../../controllers/welcome-popup-controller.dart';
 import '../user-panel/enhanced-all-products-screen.dart';
 import '../user-panel/cart-screen.dart' as cart_screen;
 import '../user-panel/profile-screen.dart';
+import '../user-panel/order-detail-screen.dart';
 import '../auth-ui/welcome-screen.dart';
 
 class NewMainScreen extends StatefulWidget {
@@ -25,6 +30,13 @@ class NewMainScreen extends StatefulWidget {
 class _NewMainScreenState extends State<NewMainScreen> {
   final User? user = FirebaseAuth.instance.currentUser;
   late WelcomePopupController _welcomeController;
+  StreamSubscription<List<OrderModel>>? _orderStatusSubscription;
+  // Orders whose "shipped" popup has already been shown (or that were
+  // already shipped when this listener first started) - without this,
+  // every unrelated change to an already-shipped order would trigger
+  // the popup again.
+  final Set<String> _shippedPopupShownFor = {};
+  bool _isFirstOrderSnapshot = true;
 
   @override
   void initState() {
@@ -37,6 +49,78 @@ class _NewMainScreenState extends State<NewMainScreen> {
         _welcomeController.showWelcomePopup();
       });
     });
+
+    _listenForShippedOrders();
+  }
+
+  void _listenForShippedOrders() {
+    if (user == null) return;
+    _orderStatusSubscription =
+        OrderRepository().streamOrdersForCustomer(user!.uid).listen((orders) {
+      if (_isFirstOrderSnapshot) {
+        // Don't pop up for orders that were already shipped before the
+        // app was even opened - only for ones that transition while
+        // we're actively watching.
+        for (final order in orders) {
+          if (order.status == OrderStatus.shipped) {
+            _shippedPopupShownFor.add(order.orderId);
+          }
+        }
+        _isFirstOrderSnapshot = false;
+        return;
+      }
+
+      for (final order in orders) {
+        if (order.status == OrderStatus.shipped &&
+            !_shippedPopupShownFor.contains(order.orderId)) {
+          _shippedPopupShownFor.add(order.orderId);
+          _showShippedPopup(order);
+        }
+      }
+    });
+  }
+
+  void _showShippedPopup(OrderModel order) {
+    if (!mounted) return;
+    final displayNumber =
+        order.orderNumber.isNotEmpty ? order.orderNumber : order.orderId;
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Your order has shipped! \u{1F69A}'),
+          content: Text(
+            "Hey! Your order having order number $displayNumber has been "
+            "shipped and you can track the live update using the "
+            "transporter details mentioned. Once the product gets "
+            "delivered, please mark it as received.",
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Later'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => OrderDetailScreen(order: order),
+                  ),
+                );
+              },
+              child: const Text('View details'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _orderStatusSubscription?.cancel();
+    super.dispose();
   }
 
   @override
