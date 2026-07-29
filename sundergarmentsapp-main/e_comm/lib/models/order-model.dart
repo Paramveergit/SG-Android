@@ -44,6 +44,26 @@ class OrderModel {
     required this.updatedAt,
   });
 
+  OrderModel copyWith({OrderStatus? status}) {
+    return OrderModel(
+      orderId: orderId,
+      orderNumber: orderNumber,
+      customerId: customerId,
+      customerName: customerName,
+      customerPhone: customerPhone,
+      customerAddress: customerAddress,
+      customerDeviceToken: customerDeviceToken,
+      items: items,
+      subtotal: subtotal,
+      total: total,
+      status: status ?? this.status,
+      statusHistory: statusHistory,
+      transporterDetails: transporterDetails,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'orderId': orderId,
