@@ -801,8 +801,13 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
 
     final url = 'https://wa.me/$number?text=${Uri.encodeComponent(message)}';
 
-    if (await canLaunch(url)) {
-      await launch(url);
+    // FIX: was using the deprecated canLaunch(String)/launch(String)
+    // API while every other WhatsApp/URL call in the app already uses
+    // canLaunchUrl(Uri)/launchUrl(Uri) - inconsistent, and the old API
+    // is on its way out of the package entirely.
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
       throw 'Could not launch $url';
     }
