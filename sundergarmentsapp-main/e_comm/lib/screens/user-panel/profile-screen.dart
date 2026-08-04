@@ -11,6 +11,7 @@ import '../../models/order-model.dart';
 import '../../models/order-status.dart';
 import '../../repositories/order-repository.dart';
 import 'order-detail-screen.dart';
+import 'all-orders-screen.dart';
 import '../auth-ui/welcome-screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -219,27 +220,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                padding: const EdgeInsets.all(8.0),
-                decoration: BoxDecoration(
-                  color: AppConstant.appMainColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
-                child: const Icon(
-                  Icons.shopping_bag_outlined,
-                  color: AppConstant.appMainColor,
-                  size: 20.0,
-                ),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8.0),
+                    decoration: BoxDecoration(
+                      color: AppConstant.appMainColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8.0),
+                    ),
+                    child: const Icon(
+                      Icons.shopping_bag_outlined,
+                      color: AppConstant.appMainColor,
+                      size: 20.0,
+                    ),
+                  ),
+                  const SizedBox(width: 12.0),
+                  const Text(
+                    'Order History',
+                    style: TextStyle(
+                      fontSize: 18.0,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 12.0),
-              const Text(
-                'Order History',
-                style: TextStyle(
-                  fontSize: 18.0,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+              // FIX: AllOrdersScreen existed in the codebase but had no
+              // live entry point anywhere in the app - a customer with
+              // more than 5 orders had no way to reach the rest. This
+              // link is the fix.
+              TextButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const AllOrdersScreen()),
                 ),
+                child: const Text('View All'),
               ),
             ],
           ),

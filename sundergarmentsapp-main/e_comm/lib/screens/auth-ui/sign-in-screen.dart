@@ -7,7 +7,6 @@ import 'package:e_comm/screens/admin-panel/admin-main-screen.dart';
 import 'package:e_comm/screens/auth-ui/email-auth-screen.dart';
 import 'package:e_comm/screens/auth-ui/forget-password-screen.dart';
 import 'package:e_comm/screens/auth-ui/sign-up-screen.dart';
-import 'package:e_comm/screens/user-panel/main-screen.dart';
 import 'package:e_comm/screens/auth-ui/home-router.dart';
 import 'package:e_comm/utils/app-constant.dart';
 import 'package:firebase_auth/firebase_auth.dart';
