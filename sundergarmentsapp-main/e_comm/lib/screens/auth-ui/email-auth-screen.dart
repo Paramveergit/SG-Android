@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:get/get.dart';
 import '../../controllers/auth_controller.dart';
-import '../user-panel/main-screen.dart';
 import '../auth-ui/home-router.dart';
 
 class EmailAuthScreen extends StatefulWidget {

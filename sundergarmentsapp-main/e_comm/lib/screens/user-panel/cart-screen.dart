@@ -153,6 +153,18 @@ class _CartScreenState extends State<CartScreen> {
           }
 
           if (snapshot.data != null) {
+            // Single in-memory sum from the snapshot's own docs - no
+            // extra Firestore read needed, computed once per rebuild
+            // instead of once per cart item.
+            double cartTotal = 0.0;
+            for (final doc in snapshot.data!.docs) {
+              final total = doc['productTotalPrice'];
+              if (total != null) {
+                cartTotal += double.tryParse(total.toString()) ?? 0.0;
+              }
+            }
+            productPriceController.totalPrice.value = cartTotal;
+
             return Container(
               child: ListView.builder(
                 itemCount: snapshot.data!.docs.length,
@@ -178,8 +190,15 @@ class _CartScreenState extends State<CartScreen> {
                         productData['productTotalPrice'].toString()),
                   );
 
-                  //calculate price
-                  productPriceController.fetchProductPrice();
+                  // FIX: this used to call productPriceController.
+                  // fetchProductPrice() here, once per cart item, on
+                  // every single rebuild - a cart with 10 items fired
+                  // 10 redundant Firestore reads every time a quantity
+                  // changed, all recomputing the exact same total this
+                  // StreamBuilder's own snapshot already has. Compute
+                  // it once, directly from the data already in hand,
+                  // right after the snapshot builds below - no extra
+                  // reads needed at all.
                   return SwipeActionCell(
                     key: ObjectKey(cartModel.productId),
                     trailingActions: [
