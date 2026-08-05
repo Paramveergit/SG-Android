@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:e_comm/utils/app-constant.dart';
+import '../theme/app_colors.dart';
 
 class AnimatedTextWidget extends StatefulWidget {
   final String text;
@@ -85,22 +85,15 @@ class _AnimatedTextWidgetState extends State<AnimatedTextWidget>
                   
                   return TextSpan(
                     text: widget.text[index],
-                    style: (widget.textStyle ?? TextStyle(
+                    style: (widget.textStyle ?? const TextStyle(
                       fontSize: 36,
                       fontWeight: FontWeight.bold,
-                      color: AppConstant.appTextColor,
+                      color: AppColors.textOnBrand,
                       letterSpacing: 2.0,
                     )).copyWith(
                       color: isVisible 
-                          ? AppConstant.appTextColor 
-                          : AppConstant.appTextColor.withOpacity(0.3),
-                      shadows: isVisible ? [
-                        Shadow(
-                          offset: Offset(2, 2),
-                          blurRadius: 4,
-                          color: Colors.black.withOpacity(0.3),
-                        ),
-                      ] : null,
+                          ? AppColors.textOnBrand 
+                          : AppColors.textOnBrand.withOpacity(0.3),
                       fontSize: isLastCharacter 
                           ? (widget.textStyle?.fontSize ?? 36) + 2
                           : widget.textStyle?.fontSize ?? 36,
