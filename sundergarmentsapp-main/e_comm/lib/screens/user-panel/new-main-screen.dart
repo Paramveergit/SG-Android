@@ -45,7 +45,19 @@ class _NewMainScreenState extends State<NewMainScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Future.delayed(const Duration(milliseconds: 500), () {
-        _welcomeController.showWelcomePopup();
+        // FIX: this used to just flip a boolean that an always-mounted
+        // widget inside the Scaffold body reacted to - which meant the
+        // "full screen" popup only ever covered the body area, leaving
+        // the AppBar and banner visible above it (the offset look).
+        // Get.dialog pushes a real full-screen route on top of
+        // everything, which is what "welcome popup" actually needs.
+        if (_welcomeController.shouldShowWelcome.value) {
+          _welcomeController.isShowingWelcome.value = true;
+          Get.dialog(
+            const WelcomePopupWidget(),
+            barrierColor: Colors.transparent,
+          );
+        }
       });
     });
 
@@ -161,7 +173,6 @@ class _NewMainScreenState extends State<NewMainScreen> {
                 _buildLogoutSection(),
               ],
             ),
-            const WelcomePopupWidget(),
           ],
         ),
       ),

@@ -225,8 +225,12 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
   void initState() {
     super.initState();
     
-    // Initialize quantity controller with empty text
-    _quantityController = TextEditingController();
+    // FIX: quantity used to start empty (null), showing a literal
+    // "Qty" placeholder until the person tapped + once - looked broken,
+    // not like a real quantity selector. Defaults to 1 now, like any
+    // normal e-commerce quantity field.
+    _selectedQuantity = 1;
+    _quantityController = TextEditingController(text: '1');
     
     // Initialize shake animation
     _shakeController = AnimationController(

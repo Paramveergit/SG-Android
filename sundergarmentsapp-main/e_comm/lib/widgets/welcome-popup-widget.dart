@@ -12,14 +12,12 @@ class WelcomePopupWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final WelcomePopupController controller = Get.find<WelcomePopupController>();
-    
-    return Obx(() {
-      if (!controller.isShowingWelcome.value) {
-        return const SizedBox.shrink();
-      }
-      
-      return _buildWelcomePopup(context, controller);
-    });
+    return _buildWelcomePopup(context, controller);
+  }
+
+  void _dismiss(WelcomePopupController controller) {
+    controller.markWelcomeAsShown();
+    Get.back();
   }
 
   Widget _buildWelcomePopup(BuildContext context, WelcomePopupController controller) {
@@ -30,7 +28,7 @@ class WelcomePopupWidget extends StatelessWidget {
           // Backdrop
           Positioned.fill(
             child: GestureDetector(
-              onTap: () => controller.markWelcomeAsShown(),
+              onTap: () => _dismiss(controller),
               child: Container(
                 color: Colors.transparent,
               ),
@@ -171,7 +169,7 @@ class WelcomePopupWidget extends StatelessWidget {
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: () => controller.markWelcomeAsShown(),
+                            onPressed: () => _dismiss(controller),
                             child: const Text(
                               'Start shopping',
                               style: TextStyle(
@@ -186,7 +184,7 @@ class WelcomePopupWidget extends StatelessWidget {
                         
                         // Skip Button
                         TextButton(
-                          onPressed: () => controller.markWelcomeAsShown(),
+                          onPressed: () => _dismiss(controller),
                           child: const Text(
                             'Skip for now',
                             style: TextStyle(
