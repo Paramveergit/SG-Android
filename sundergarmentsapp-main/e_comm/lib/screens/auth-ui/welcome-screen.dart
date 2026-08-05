@@ -1,11 +1,12 @@
-// ignore_for_file: file_names, prefer_const_constructors, avoid_unnecessary_containers, prefer_const_literals_to_create_immutables
+// ignore_for_file: file_names
 
 import 'package:e_comm/controllers/google-sign-in-controller.dart';
 import 'package:e_comm/screens/auth-ui/sign-in-screen.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lottie/lottie.dart';
-import '../../utils/app-constant.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_spacing.dart';
 
 class WelcomeScreen extends StatelessWidget {
   WelcomeScreen({super.key});
@@ -16,88 +17,65 @@ class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        elevation: 0,
-        centerTitle: true,
-        backgroundColor: AppConstant.appScendoryColor,
-        title: Text(
-          "Welcome to my app",
-          style: TextStyle(color: AppConstant.appTextColor),
-        ),
-      ),
-      body: SingleChildScrollView(
-        child: Container(
-          padding: EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              Container(
-                child: Lottie.asset('assets/images/splash-icon.json'),
-              ),
-              Container(
-                margin: EdgeInsets.only(top: 20.0),
-                child: Text(
-                  "Happy Shopping",
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              vertical: AppSpacing.xl,
+              horizontal: AppSpacing.lg,
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                SizedBox(
+                  height: 200,
+                  child: Lottie.asset('assets/images/splash-icon.json'),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                const Text(
+                  'Sunder Garments',
                   style: TextStyle(
-                    fontSize: 16.0,
+                    fontSize: 22.0,
                     fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
                   ),
                 ),
-              ),
-              SizedBox(
-                height: Get.height / 12,
-              ),
-              Material(
-                child: Container(
-                  width: Get.width / 1.2,
-                  height: Get.height / 12,
-                  decoration: BoxDecoration(
-                    color: AppConstant.appScendoryColor,
-                    borderRadius: BorderRadius.circular(20.0),
-                  ),
-                  child: TextButton.icon(
+                const SizedBox(height: AppSpacing.xs),
+                const Text(
+                  'Wholesale ordering, made simple',
+                  style: TextStyle(fontSize: 14.0, color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: AppSpacing.xxl),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton.icon(
                     icon: Image.asset(
                       'assets/images/final-google-logo.png',
-                      width: Get.width / 12,
-                      height: Get.height / 12,
+                      width: 20,
+                      height: 20,
                     ),
-                    label: Text(
-                      "Sign in with google",
-                      style: TextStyle(color: AppConstant.appTextColor),
-                    ),
+                    label: const Text('Sign in with Google'),
                     onPressed: () {
                       _googleSignInController.signInWithGoogle();
                     },
                   ),
                 ),
-              ),
-              SizedBox(
-                height: Get.height / 50,
-              ),
-              Material(
-                child: Container(
-                  width: Get.width / 1.2,
-                  height: Get.height / 12,
-                  decoration: BoxDecoration(
-                    color: AppConstant.appScendoryColor,
-                    borderRadius: BorderRadius.circular(20.0),
-                  ),
-                  child: TextButton.icon(
-                    icon: Icon(
-                      Icons.email,
-                      color: AppConstant.appTextColor,
-                    ),
-                    label: Text(
-                      "Sign in with email",
-                      style: TextStyle(color: AppConstant.appTextColor),
-                    ),
+                const SizedBox(height: AppSpacing.sm),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.email_outlined),
+                    label: const Text('Sign in with email'),
                     onPressed: () {
                       Get.to(() => SignInScreen());
                     },
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

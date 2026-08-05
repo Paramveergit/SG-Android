@@ -7,6 +7,9 @@ import '../admin-panel/admin-main-screen.dart';
 import '../auth-ui/sign-in-screen.dart';
 import '../user-panel/new-main-screen.dart';
 import '../../controllers/get-user-data-controller.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_spacing.dart';
+import '../../widgets/app_error_state.dart';
 
 /// Centralized post-auth router.
 /// Decides which home screen to show while keeping the rest of the app unchanged.
@@ -102,6 +105,7 @@ class _HomeRouterState extends State<HomeRouter> {
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
           return const Scaffold(
+            backgroundColor: AppColors.background,
             body: Center(child: CircularProgressIndicator()),
           );
         }
@@ -153,41 +157,26 @@ class _HomeRouterErrorScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.error_outline, size: 56, color: Colors.red.shade400),
-                const SizedBox(height: 16),
-                const Text(
-                  'Could not load your account',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                SelectableText(
-                  error,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: onRetry,
-                  child: const Text('Try Again'),
-                ),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: () async {
-                    await FirebaseAuth.instance.signOut();
-                    Get.offAll(() => const SignInScreen());
-                  },
-                  child: const Text('Sign Out'),
-                ),
-              ],
-            ),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AppErrorState(
+                title: 'Could not load your account',
+                message: error,
+                onRetry: onRetry,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              TextButton(
+                onPressed: () async {
+                  await FirebaseAuth.instance.signOut();
+                  Get.offAll(() => const SignInScreen());
+                },
+                child: const Text('Sign out'),
+              ),
+            ],
           ),
         ),
       ),

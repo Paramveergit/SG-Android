@@ -1,10 +1,9 @@
 import 'package:e_comm/services/auth/email_auth_service.dart';
-import 'package:e_comm/utils/app-constant.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:get/get.dart';
 import '../../controllers/auth_controller.dart';
+import '../../theme/app_colors.dart';
 import '../auth-ui/home-router.dart';
 
 class EmailAuthScreen extends StatefulWidget {
@@ -27,17 +26,14 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppConstant.appScendoryColor,
+      backgroundColor: AppColors.brandDark,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
+        iconTheme: const IconThemeData(color: AppColors.textOnBrand),
         title: Text(
-          _isSignIn ? "Sign In" : "Create Account",
-          style: const TextStyle(color: Colors.white),
+          _isSignIn ? "Sign in" : "Create account",
+          style: const TextStyle(color: AppColors.textOnBrand),
         ),
       ),
       body: SingleChildScrollView(
@@ -54,22 +50,23 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
-                  style: const TextStyle(color: Colors.white),
+                  style: const TextStyle(color: AppColors.textOnBrand),
                   decoration: InputDecoration(
                     labelText: "Email",
-                    labelStyle: TextStyle(color: Colors.white.withOpacity(0.8)),
-                    prefixIcon: const Icon(Icons.email, color: Colors.white),
+                    labelStyle: TextStyle(color: AppColors.textOnBrand.withOpacity(0.8)),
+                    prefixIcon: const Icon(Icons.email_outlined, color: AppColors.textOnBrand),
+                    filled: false,
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: Colors.white.withOpacity(0.5)),
+                      borderSide: BorderSide(color: AppColors.textOnBrand.withOpacity(0.5)),
                     ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: Colors.white),
+                    focusedBorder: const OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(10)),
+                      borderSide: BorderSide(color: AppColors.textOnBrand),
                     ),
-                    errorBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: Colors.red),
+                    errorBorder: const OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(10)),
+                      borderSide: BorderSide(color: AppColors.dangerBg),
                     ),
                   ),
                   validator: (value) {
@@ -89,15 +86,16 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                 TextFormField(
                   controller: _passwordController,
                   obscureText: !_isPasswordVisible,
-                  style: const TextStyle(color: Colors.white),
+                  style: const TextStyle(color: AppColors.textOnBrand),
                   decoration: InputDecoration(
                     labelText: "Password",
-                    labelStyle: TextStyle(color: Colors.white.withOpacity(0.8)),
-                    prefixIcon: const Icon(Icons.lock, color: Colors.white),
+                    labelStyle: TextStyle(color: AppColors.textOnBrand.withOpacity(0.8)),
+                    prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textOnBrand),
+                    filled: false,
                     suffixIcon: IconButton(
                       icon: Icon(
                         _isPasswordVisible ? Icons.visibility_off : Icons.visibility,
-                        color: Colors.white,
+                        color: AppColors.textOnBrand,
                       ),
                       onPressed: () {
                         setState(() {
@@ -107,15 +105,15 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: Colors.white.withOpacity(0.5)),
+                      borderSide: BorderSide(color: AppColors.textOnBrand.withOpacity(0.5)),
                     ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: Colors.white),
+                    focusedBorder: const OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(10)),
+                      borderSide: BorderSide(color: AppColors.textOnBrand),
                     ),
-                    errorBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: Colors.red),
+                    errorBorder: const OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(10)),
+                      borderSide: BorderSide(color: AppColors.dangerBg),
                     ),
                   ),
                   validator: (value) {
@@ -138,8 +136,8 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                     child: TextButton(
                       onPressed: _forgotPassword,
                       child: const Text(
-                        "Forgot Password?",
-                        style: TextStyle(color: Colors.white),
+                        "Forgot password?",
+                        style: TextStyle(color: AppColors.textOnBrand),
                       ),
                     ),
                   ),
@@ -150,15 +148,12 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                 ElevatedButton(
                   onPressed: _isLoading ? null : _submitForm,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: AppConstant.appMainColor,
+                    backgroundColor: AppColors.surface,
+                    foregroundColor: AppColors.brand,
                     padding: const EdgeInsets.symmetric(vertical: 15),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
                   ),
                   child: Text(
-                    _isSignIn ? "SIGN IN" : "CREATE ACCOUNT",
+                    _isSignIn ? "Sign in" : "Create account",
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -174,7 +169,7 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                   children: [
                     Text(
                       _isSignIn ? "Don't have an account? " : "Already have an account? ",
-                      style: TextStyle(color: Colors.white.withOpacity(0.8)),
+                      style: TextStyle(color: AppColors.textOnBrand.withOpacity(0.8)),
                     ),
                     TextButton(
                       onPressed: () {
@@ -183,9 +178,9 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                         });
                       },
                       child: Text(
-                        _isSignIn ? "Sign Up" : "Sign In",
+                        _isSignIn ? "Sign up" : "Sign in",
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.textOnBrand,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
