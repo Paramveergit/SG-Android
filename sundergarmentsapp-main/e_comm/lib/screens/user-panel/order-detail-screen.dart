@@ -8,7 +8,9 @@ import '../../models/order-model.dart';
 import '../../models/order-status.dart';
 import '../../models/transporter-details-model.dart';
 import '../../repositories/order-repository.dart';
-import '../../utils/app-constant.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_spacing.dart';
+import '../../theme/app_radius.dart';
 
 /// Read-only order detail view for the customer's own order - the one
 /// screen that was missing entirely before this. The admin app has
@@ -64,17 +66,14 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppConstant.appMainColor,
-        iconTheme: IconThemeData(color: AppConstant.appTextColor),
         title: Text(
           order.orderNumber.isNotEmpty ? 'Order ${order.orderNumber}' : 'Order details',
-          style: TextStyle(color: AppConstant.appTextColor),
         ),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(12.0),
+        padding: const EdgeInsets.all(AppSpacing.md),
         children: [
           _StatusProgressCard(order: order),
           if (order.status == OrderStatus.shipped) ...[
@@ -84,8 +83,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               child: ElevatedButton.icon(
                 onPressed: _isMarkingReceived ? null : _markAsReceived,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green.shade600,
-                  foregroundColor: Colors.white,
+                  backgroundColor: AppColors.successFg,
+                  foregroundColor: AppColors.textOnBrand,
                   padding: const EdgeInsets.symmetric(vertical: 14.0),
                 ),
                 icon: _isMarkingReceived
@@ -94,7 +93,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                         height: 16,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation(Colors.white),
+                          valueColor: AlwaysStoppedAnimation(AppColors.textOnBrand),
                         ),
                       )
                     : const Icon(Icons.check_circle_outline),
@@ -130,20 +129,24 @@ class _SectionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12.0),
-        border: Border.all(color: Colors.grey.shade200),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.surfaceBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: const TextStyle(fontSize: 14.0, fontWeight: FontWeight.w700),
+            style: const TextStyle(
+              fontSize: 14.0,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
           ),
-          const SizedBox(height: 12.0),
+          const SizedBox(height: AppSpacing.sm),
           ...children,
         ],
       ),
@@ -160,19 +163,18 @@ class _StatusProgressCard extends StatelessWidget {
     if (order.status == OrderStatus.cancelled) {
       return Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
-          color: Colors.red.shade50,
-          borderRadius: BorderRadius.circular(12.0),
-          border: Border.all(color: Colors.red.shade100),
+          color: AppColors.cancelledBg,
+          borderRadius: BorderRadius.circular(AppRadius.md),
         ),
         child: Row(
           children: [
-            Icon(Icons.cancel_outlined, color: Colors.red.shade400),
+            const Icon(Icons.cancel_outlined, color: AppColors.cancelledFg),
             const SizedBox(width: 10.0),
             const Text(
               'This order was cancelled',
-              style: TextStyle(fontWeight: FontWeight.w600),
+              style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary),
             ),
           ],
         ),
@@ -214,13 +216,13 @@ class _StatusProgressCard extends StatelessWidget {
                   Icon(
                     isDone ? Icons.check_circle : Icons.circle_outlined,
                     size: 20.0,
-                    color: isDone ? Colors.green.shade600 : Colors.grey.shade400,
+                    color: isDone ? AppColors.successFg : AppColors.textSecondary,
                   ),
                   if (!isLast)
                     Container(
                       width: 2.0,
                       height: 28.0,
-                      color: isDone ? Colors.green.shade200 : Colors.grey.shade300,
+                      color: isDone ? AppColors.successFg.withOpacity(0.3) : AppColors.surfaceBorder,
                     ),
                 ],
               ),
@@ -232,7 +234,7 @@ class _StatusProgressCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 13.0,
                     fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w400,
-                    color: isDone ? Colors.black87 : Colors.grey.shade500,
+                    color: isDone ? AppColors.textPrimary : AppColors.textSecondary,
                   ),
                 ),
               ),
@@ -276,15 +278,15 @@ class _ItemsCard extends StatelessWidget {
                           errorWidget: (_, __, ___) => Container(
                             width: 48.0,
                             height: 48.0,
-                            color: Colors.grey.shade200,
-                            child: const Icon(Icons.image_not_supported_outlined, size: 18.0),
+                            color: AppColors.surfaceMuted,
+                            child: const Icon(Icons.image_not_supported_outlined, size: 18.0, color: AppColors.textSecondary),
                           ),
                         )
                       : Container(
                           width: 48.0,
                           height: 48.0,
-                          color: Colors.grey.shade200,
-                          child: const Icon(Icons.checkroom_outlined, size: 20.0),
+                          color: AppColors.surfaceMuted,
+                          child: const Icon(Icons.checkroom_outlined, size: 20.0, color: AppColors.textSecondary),
                         ),
                 ),
                 const SizedBox(width: 12.0),
@@ -299,18 +301,18 @@ class _ItemsCard extends StatelessWidget {
                       if (variantParts.isNotEmpty)
                         Text(
                           variantParts.join(' / '),
-                          style: TextStyle(fontSize: 12.0, color: Colors.grey.shade600),
+                          style: const TextStyle(fontSize: 12.0, color: AppColors.textSecondary),
                         ),
                       Text(
                         'Qty: ${item.quantity}',
-                        style: TextStyle(fontSize: 12.0, color: Colors.grey.shade600),
+                        style: const TextStyle(fontSize: 12.0, color: AppColors.textSecondary),
                       ),
                     ],
                   ),
                 ),
                 Text(
                   '\u20b9${item.lineTotal.toStringAsFixed(2)}',
-                  style: const TextStyle(fontSize: 13.0, fontWeight: FontWeight.w600),
+                  style: const TextStyle(fontSize: 13.0, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
                 ),
               ],
             ),
@@ -320,10 +322,10 @@ class _ItemsCard extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('Total', style: TextStyle(fontWeight: FontWeight.w700)),
+            const Text('Total', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
             Text(
               '\u20b9${order.total.toStringAsFixed(2)}',
-              style: const TextStyle(fontWeight: FontWeight.w700),
+              style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.textPrimary),
             ),
           ],
         ),
@@ -341,11 +343,11 @@ class _DeliveryAddressCard extends StatelessWidget {
     return _SectionCard(
       title: 'Delivery details',
       children: [
-        Text(order.customerName, style: const TextStyle(fontWeight: FontWeight.w600)),
+        Text(order.customerName, style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
         const SizedBox(height: 2.0),
-        Text(order.customerPhone, style: TextStyle(color: Colors.grey.shade700)),
+        Text(order.customerPhone, style: const TextStyle(color: AppColors.textSecondary)),
         const SizedBox(height: 2.0),
-        Text(order.customerAddress, style: TextStyle(color: Colors.grey.shade700)),
+        Text(order.customerAddress, style: const TextStyle(color: AppColors.textSecondary)),
       ],
     );
   }
@@ -364,10 +366,10 @@ class _TransporterCard extends StatelessWidget {
         children: [
           SizedBox(
             width: 120.0,
-            child: Text(label, style: TextStyle(fontSize: 12.0, color: Colors.grey.shade600)),
+            child: Text(label, style: const TextStyle(fontSize: 12.0, color: AppColors.textSecondary)),
           ),
           Expanded(
-            child: Text(value, style: const TextStyle(fontSize: 13.0, fontWeight: FontWeight.w600)),
+            child: Text(value, style: const TextStyle(fontSize: 13.0, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
           ),
         ],
       ),
@@ -400,8 +402,8 @@ class _TransporterCard extends StatelessWidget {
               icon: const Icon(Icons.local_shipping_outlined, size: 18.0),
               label: const Text('Track shipment'),
               style: OutlinedButton.styleFrom(
-                foregroundColor: AppConstant.appMainColor,
-                side: BorderSide(color: AppConstant.appMainColor),
+                foregroundColor: AppColors.brand,
+                side: const BorderSide(color: AppColors.brand),
               ),
             ),
           ),
@@ -430,10 +432,10 @@ class _InvoiceCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(10.0),
               decoration: BoxDecoration(
-                color: Colors.green.shade50,
-                borderRadius: BorderRadius.circular(10.0),
+                color: AppColors.successBg,
+                borderRadius: BorderRadius.circular(AppRadius.sm),
               ),
-              child: Icon(Icons.picture_as_pdf, color: Colors.green.shade700, size: 24.0),
+              child: const Icon(Icons.picture_as_pdf, color: AppColors.successFg, size: 24.0),
             ),
             const SizedBox(width: 12.0),
             Expanded(
@@ -442,11 +444,11 @@ class _InvoiceCard extends StatelessWidget {
                 children: [
                   Text(
                     'Invoice_$orderNumber.pdf',
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.0),
+                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.0, color: AppColors.textPrimary),
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 2.0),
-                  Text('Tap to view or download', style: TextStyle(fontSize: 12.0, color: Colors.grey.shade600)),
+                  const Text('Tap to view or download', style: TextStyle(fontSize: 12.0, color: AppColors.textSecondary)),
                 ],
               ),
             ),
@@ -462,13 +464,8 @@ class _InvoiceCard extends StatelessWidget {
                 await launchUrl(uri, mode: LaunchMode.externalApplication);
               }
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppConstant.appMainColor,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 12.0),
-            ),
             icon: const Icon(Icons.download_outlined, size: 18.0),
-            label: const Text('View Invoice'),
+            label: const Text('View invoice'),
           ),
         ),
       ],
