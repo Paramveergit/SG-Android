@@ -6,10 +6,14 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import '../../utils/app-constant.dart';
 import '../../models/order-model.dart';
-import '../../models/order-status.dart';
 import '../../repositories/order-repository.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_spacing.dart';
+import '../../theme/app_radius.dart';
+import '../../widgets/status_badge.dart';
+import '../../widgets/app_empty_state.dart';
+import '../../widgets/app_error_state.dart';
 import 'order-detail-screen.dart';
 import 'all-orders-screen.dart';
 import '../auth-ui/welcome-screen.dart';
@@ -28,15 +32,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text(
-          'Profile',
-          style: TextStyle(color: AppConstant.appTextColor),
-        ),
-        backgroundColor: AppConstant.appMainColor,
-        iconTheme: const IconThemeData(color: AppConstant.appTextColor),
-        elevation: 2.0,
+        title: const Text('Profile'),
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -67,15 +65,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       margin: const EdgeInsets.all(16.0),
       padding: const EdgeInsets.all(24.0),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16.0),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10.0,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.surfaceBorder),
       ),
       child: Column(
         children: [
@@ -83,23 +75,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Container(
             width: 80.0,
             height: 80.0,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(
-                color: AppConstant.appMainColor,
-                width: 3.0,
-              ),
+              border: Border.fromBorderSide(BorderSide(color: AppColors.brand, width: 3.0)),
             ),
             child: CircleAvatar(
               radius: 36.0,
-              backgroundColor: AppConstant.appMainColor,
+              backgroundColor: AppColors.brand,
               backgroundImage: user?.photoURL != null 
                 ? NetworkImage(user!.photoURL!) 
                 : null,
               child: user?.photoURL == null 
                 ? const Icon(
                     Icons.person,
-                    color: AppConstant.appTextColor,
+                    color: AppColors.textOnBrand,
                     size: 40.0,
                   )
                 : null,
@@ -114,7 +103,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             style: const TextStyle(
               fontSize: 24.0,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: AppColors.textPrimary,
             ),
           ),
           
@@ -124,9 +113,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           if (user?.email != null)
             Text(
               user!.email!,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 14.0,
-                color: Colors.grey.shade600,
+                color: AppColors.textSecondary,
               ),
             ),
           
@@ -178,7 +167,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       children: [
         Icon(
           icon,
-          color: AppConstant.appMainColor,
+          color: AppColors.brand,
           size: 24.0,
         ),
         const SizedBox(height: 8.0),
@@ -187,14 +176,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
           style: const TextStyle(
             fontSize: 20.0,
             fontWeight: FontWeight.bold,
-            color: Colors.black87,
+            color: AppColors.textPrimary,
           ),
         ),
         Text(
           label,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 14.0,
-            color: Colors.grey.shade600,
+            color: AppColors.textSecondary,
           ),
         ),
       ],
@@ -203,18 +192,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildOrderHistorySection() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16.0),
-      padding: const EdgeInsets.all(20.0),
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16.0),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10.0,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.surfaceBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -227,12 +210,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Container(
                     padding: const EdgeInsets.all(8.0),
                     decoration: BoxDecoration(
-                      color: AppConstant.appMainColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8.0),
+                      color: AppColors.brandTintBg,
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
                     ),
                     child: const Icon(
                       Icons.shopping_bag_outlined,
-                      color: AppConstant.appMainColor,
+                      color: AppColors.brand,
                       size: 20.0,
                     ),
                   ),
@@ -242,7 +225,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     style: TextStyle(
                       fontSize: 18.0,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                      color: AppColors.textPrimary,
                     ),
                   ),
                 ],
@@ -273,7 +256,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Padding(
                     padding: EdgeInsets.all(20.0),
                     child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(AppConstant.appMainColor),
+                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.brand),
                     ),
                   ),
                 );
@@ -306,85 +289,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildOrderErrorState(String error) {
-    return Container(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(20.0),
-            decoration: BoxDecoration(
-              color: Colors.red.shade50,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.error_outline,
-              size: 48.0,
-              color: Colors.red.shade400,
-            ),
-          ),
-          const SizedBox(height: 16.0),
-          const Text(
-            'Could not load your orders',
-            style: TextStyle(
-              fontSize: 18.0,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 8.0),
-          // Shown deliberately, not logged-only: this text is what lets
-          // us actually diagnose the real cause instead of guessing.
-          // Screenshot/copy this if you're reporting the bug.
-          SelectableText(
-            error,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 12.0,
-              color: Colors.grey.shade700,
-            ),
-          ),
-        ],
-      ),
+    // Message shown deliberately, not logged-only: this text is what
+    // lets us actually diagnose the real cause instead of guessing.
+    return AppErrorState(
+      title: 'Could not load your orders',
+      message: error,
     );
   }
 
   Widget _buildEmptyOrderState() {
-    return Container(
-      padding: const EdgeInsets.all(32.0),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(20.0),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.shopping_bag_outlined,
-              size: 48.0,
-              color: Colors.grey.shade400,
-            ),
-          ),
-          const SizedBox(height: 16.0),
-          const Text(
-            'No orders found!',
-            style: TextStyle(
-              fontSize: 18.0,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 8.0),
-          Text(
-            'Your order history will appear here',
-            style: TextStyle(
-              fontSize: 14.0,
-              color: Colors.grey.shade600,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
+    return const AppEmptyState(
+      icon: Icons.shopping_bag_outlined,
+      title: 'No orders yet',
+      message: 'Your order history will appear here.',
     );
   }
 
@@ -395,20 +312,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ? order.orderId.substring(0, 8)
             : order.orderId);
     return InkWell(
-      borderRadius: BorderRadius.circular(12.0),
+      borderRadius: BorderRadius.circular(AppRadius.md),
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => OrderDetailScreen(order: order),
         ),
       ),
       child: Container(
-      margin: const EdgeInsets.only(bottom: 12.0),
-      padding: const EdgeInsets.all(16.0),
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(12.0),
+        color: AppColors.surfaceMuted,
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(
-          color: Colors.grey.shade200,
+          color: AppColors.surfaceBorder,
           width: 1.0,
         ),
       ),
@@ -417,12 +334,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Container(
             padding: const EdgeInsets.all(8.0),
             decoration: BoxDecoration(
-              color: AppConstant.appMainColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8.0),
+              color: AppColors.brandTintBg,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
             ),
             child: const Icon(
               Icons.receipt_long,
-              color: AppConstant.appMainColor,
+              color: AppColors.brand,
               size: 20.0,
             ),
           ),
@@ -436,17 +353,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   style: const TextStyle(
                     fontSize: 14.0,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    color: AppColors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 4.0),
-                Text(
-                  'Status: ${order.status.label}',
-                  style: TextStyle(
-                    fontSize: 12.0,
-                    color: Colors.grey.shade600,
-                  ),
-                ),
+                StatusBadge(status: order.status),
               ],
             ),
           ),
@@ -455,7 +366,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             style: const TextStyle(
               fontSize: 14.0,
               fontWeight: FontWeight.bold,
-              color: AppConstant.appMainColor,
+              color: AppColors.textPrimary,
             ),
           ),
         ],
@@ -466,28 +377,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildAccountActions() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16.0),
-      padding: const EdgeInsets.all(20.0),
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16.0),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10.0,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.surfaceBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Account Actions',
+            'Account actions',
             style: TextStyle(
               fontSize: 18.0,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: AppColors.textPrimary,
             ),
           ),
           
@@ -527,12 +432,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12.0),
       child: Container(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
-          color: isDestructive ? Colors.red.shade50 : Colors.grey.shade50,
-          borderRadius: BorderRadius.circular(12.0),
+          color: isDestructive ? AppColors.dangerBg : AppColors.surfaceMuted,
+          borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(
-            color: isDestructive ? Colors.red.shade200 : Colors.grey.shade200,
+            color: isDestructive ? AppColors.dangerFg.withOpacity(0.3) : AppColors.surfaceBorder,
             width: 1.0,
           ),
         ),
@@ -542,13 +447,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
               padding: const EdgeInsets.all(8.0),
               decoration: BoxDecoration(
                 color: isDestructive 
-                  ? Colors.red.withValues(alpha: 0.1)
-                  : AppConstant.appMainColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8.0),
+                  ? AppColors.dangerBg
+                  : AppColors.brandTintBg,
+                borderRadius: BorderRadius.circular(AppRadius.sm),
               ),
               child: Icon(
                 icon,
-                color: isDestructive ? Colors.red : AppConstant.appMainColor,
+                color: isDestructive ? AppColors.dangerFg : AppColors.brand,
                 size: 20.0,
               ),
             ),
@@ -562,14 +467,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     style: TextStyle(
                       fontSize: 16.0,
                       fontWeight: FontWeight.bold,
-                      color: isDestructive ? Colors.red : Colors.black87,
+                      color: isDestructive ? AppColors.dangerFg : AppColors.textPrimary,
                     ),
                   ),
                   Text(
                     subtitle,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 14.0,
-                      color: Colors.grey.shade600,
+                      color: AppColors.textSecondary,
                     ),
                   ),
                 ],
@@ -577,7 +482,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             Icon(
               Icons.arrow_forward_ios,
-              color: isDestructive ? Colors.red : Colors.grey.shade400,
+              color: isDestructive ? AppColors.dangerFg : AppColors.textSecondary,
               size: 16.0,
             ),
           ],
@@ -627,7 +532,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Navigator.pop(context);
               _deleteAccount();
             },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: TextButton.styleFrom(foregroundColor: AppColors.dangerFg),
             child: const Text('Delete'),
           ),
         ],
