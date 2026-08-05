@@ -1,7 +1,7 @@
 // ignore_for_file: file_names
 
 import 'package:flutter/material.dart';
-import 'theme/app_colors.dart';
+import '../theme/app_colors.dart';
 
 /// Kept for backward compatibility - the ~35 files that reference
 /// AppConstant.* still work unchanged. Values now point at the new
