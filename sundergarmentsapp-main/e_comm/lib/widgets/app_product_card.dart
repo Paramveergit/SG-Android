@@ -12,11 +12,19 @@ import '../theme/app_spacing.dart';
 class AppProductCard extends StatelessWidget {
   final ProductModel product;
   final VoidCallback onTap;
+  // Optional quick-add-to-cart, used by grid/browsing screens where
+  // bulk-ordering customers benefit from adding without opening the
+  // product page. Home screen and other simple listings can omit
+  // these and get a plain tap-to-view card.
+  final VoidCallback? onAddToCart;
+  final bool isAddingToCart;
 
   const AppProductCard({
     super.key,
     required this.product,
     required this.onTap,
+    this.onAddToCart,
+    this.isAddingToCart = false,
   });
 
   @override
@@ -116,6 +124,30 @@ class AppProductCard extends StatelessWidget {
                 color: AppColors.textPrimary,
               ),
             ),
+            if (onAddToCart != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              SizedBox(
+                width: double.infinity,
+                height: 32,
+                child: ElevatedButton(
+                  onPressed: isAddingToCart ? null : onAddToCart,
+                  style: ElevatedButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(0, 32),
+                  ),
+                  child: isAddingToCart
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.textOnBrand,
+                          ),
+                        )
+                      : const Text('Add to cart', style: TextStyle(fontSize: 12)),
+                ),
+              ),
+            ],
           ],
         ),
       ),
