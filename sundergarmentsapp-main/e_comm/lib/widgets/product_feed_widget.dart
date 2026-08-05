@@ -5,26 +5,25 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
-import '../../models/product-model.dart';
-import '../../models/cart-model.dart';
-import '../../theme/app_colors.dart';
-import '../../theme/app_spacing.dart';
-import '../../theme/app_radius.dart';
-import '../../widgets/app_product_card.dart';
-import '../../widgets/app_empty_state.dart';
-import '../../widgets/app_error_state.dart';
-import '../../widgets/skeleton_box.dart';
-import 'cart-screen.dart';
-import 'product-details-screen.dart';
+import '../models/product-model.dart';
+import '../models/cart-model.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
+import '../theme/app_radius.dart';
+import 'app_product_list_tile.dart';
+import 'app_empty_state.dart';
+import 'app_error_state.dart';
+import 'skeleton_box.dart';
+import '../screens/user-panel/product-details-screen.dart';
 
-class EnhancedAllProductsScreen extends StatefulWidget {
-  const EnhancedAllProductsScreen({super.key});
+class ProductFeedWidget extends StatefulWidget {
+  const ProductFeedWidget({super.key});
 
   @override
-  State<EnhancedAllProductsScreen> createState() => _EnhancedAllProductsScreenState();
+  State<ProductFeedWidget> createState() => _ProductFeedWidgetState();
 }
 
-class _EnhancedAllProductsScreenState extends State<EnhancedAllProductsScreen> {
+class _ProductFeedWidgetState extends State<ProductFeedWidget> {
   String? selectedCategoryId;
   String searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
@@ -75,30 +74,19 @@ class _EnhancedAllProductsScreenState extends State<EnhancedAllProductsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('All Products'),
-        actions: [
-          IconButton(
-            onPressed: () => Get.to(() => const CartScreen()),
-            icon: const Icon(Icons.shopping_cart_outlined),
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Search and Filter Section
-            _buildSearchAndFilterSection(),
-            
-            // Products Grid
-            Expanded(
-              child: _buildProductsGrid(),
-            ),
-          ],
+    // No Scaffold/AppBar of its own - this widget is embedded inside
+    // whichever screen uses it (Browsing screen's own Scaffold, or
+    // Home's), each of which provides its own AppBar/branding around it.
+    return Column(
+      children: [
+        // Search and Filter Section
+        _buildSearchAndFilterSection(),
+        
+        // Products List
+        Expanded(
+          child: _buildProductsGrid(),
         ),
-      ),
+      ],
     );
   }
 
@@ -213,17 +201,11 @@ class _EnhancedAllProductsScreenState extends State<EnhancedAllProductsScreen> {
         }
 
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return GridView.builder(
+          return ListView.builder(
             padding: const EdgeInsets.all(AppSpacing.md),
             physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              childAspectRatio: 0.58,
-              crossAxisSpacing: AppSpacing.md,
-              mainAxisSpacing: AppSpacing.md,
-            ),
             itemCount: 6,
-            itemBuilder: (context, index) => const ProductCardSkeleton(),
+            itemBuilder: (context, index) => const ProductListTileSkeleton(),
           );
         }
 
@@ -254,16 +236,10 @@ class _EnhancedAllProductsScreenState extends State<EnhancedAllProductsScreen> {
           );
         }
 
-        print('Building GridView with ${products.length} products');
-        return GridView.builder(
+        print('Building product list with ${products.length} products');
+        return ListView.builder(
           padding: const EdgeInsets.all(AppSpacing.md),
           physics: const AlwaysScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            childAspectRatio: 0.58,
-            crossAxisSpacing: AppSpacing.md,
-            mainAxisSpacing: AppSpacing.md,
-          ),
           itemCount: products.length,
           itemBuilder: (context, index) {
             final productData = products[index].data() as Map<String, dynamic>;
@@ -287,7 +263,7 @@ class _EnhancedAllProductsScreenState extends State<EnhancedAllProductsScreen> {
             };
             final productModel = ProductModel.fromMap(safeProductData);
 
-            return AppProductCard(
+            return AppProductListTile(
               product: productModel,
               onTap: () => Get.to(() => ProductDetailsScreen(productModel: productModel)),
               onAddToCart: () => _handleAddToCart(productModel),

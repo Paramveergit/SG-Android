@@ -1,7 +1,15 @@
 // Home screen - Warehouse Ledger, Storefront design.
-// All functional logic (shipped-order popup listener, welcome popup,
-// support sheet, logout flow) is unchanged from before - only the
-// visual layer was redesigned onto the new tokens.
+//
+// Rebuilt per direct feedback: Home used to be just 4 static menu
+// cards with no actual products visible. Now shows the same live
+// product feed as the Browsing screen (shared via ProductFeedWidget,
+// see lib/widgets/product_feed_widget.dart), with a bottom nav bar
+// for Cart/Profile/Help since those are no longer reachable via nav
+// cards. Sign-out moved to live only in Profile (it was duplicated
+// here before) - Profile already has its own full sign-out flow.
+//
+// All functional logic (shipped-order popup listener, welcome popup)
+// is unchanged from before.
 
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -15,14 +23,12 @@ import '../../repositories/order-repository.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_radius.dart';
 import '../../theme/app_spacing.dart';
-import '../../widgets/banner-widget.dart';
 import '../../widgets/welcome-popup-widget.dart';
+import '../../widgets/product_feed_widget.dart';
 import '../../controllers/welcome-popup-controller.dart';
-import '../user-panel/enhanced-all-products-screen.dart';
 import '../user-panel/cart-screen.dart' as cart_screen;
 import '../user-panel/profile-screen.dart';
 import '../user-panel/order-detail-screen.dart';
-import '../auth-ui/welcome-screen.dart';
 
 class NewMainScreen extends StatefulWidget {
   const NewMainScreen({super.key});
@@ -45,12 +51,6 @@ class _NewMainScreenState extends State<NewMainScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Future.delayed(const Duration(milliseconds: 500), () {
-        // FIX: this used to just flip a boolean that an always-mounted
-        // widget inside the Scaffold body reacted to - which meant the
-        // "full screen" popup only ever covered the body area, leaving
-        // the AppBar and banner visible above it (the offset look).
-        // Get.dialog pushes a real full-screen route on top of
-        // everything, which is what "welcome popup" actually needs.
         if (_welcomeController.shouldShowWelcome.value) {
           _welcomeController.isShowingWelcome.value = true;
           Get.dialog(
@@ -146,36 +146,43 @@ class _NewMainScreenState extends State<NewMainScreen> {
         toolbarHeight: 72.0,
         title: _buildHeaderWithLogo(),
         centerTitle: false,
+        actions: [
+          IconButton(
+            onPressed: () => Get.to(() => cart_screen.CartScreen()),
+            icon: const Icon(Icons.shopping_cart_outlined),
+          ),
+        ],
       ),
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Column(
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    child: Column(
-                      children: [
-                        const SizedBox(height: AppSpacing.md),
-                        Padding(
-                          padding:
-                              const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                          child: BannerWidget(),
-                        ),
-                        const SizedBox(height: AppSpacing.xl),
-                        _buildNavigationCards(),
-                        const SizedBox(height: AppSpacing.xl),
-                      ],
-                    ),
-                  ),
-                ),
-                _buildLogoutSection(),
-              ],
-            ),
-          ],
-        ),
+      body: const SafeArea(
+        child: ProductFeedWidget(),
       ),
+      bottomNavigationBar: _buildBottomNav(),
+    );
+  }
+
+  Widget _buildBottomNav() {
+    return BottomNavigationBar(
+      currentIndex: 0,
+      type: BottomNavigationBarType.fixed,
+      onTap: (index) {
+        switch (index) {
+          case 1:
+            Get.to(() => cart_screen.CartScreen());
+            break;
+          case 2:
+            Get.to(() => const ProfileScreen());
+            break;
+          case 3:
+            _showSupportOptions();
+            break;
+        }
+      },
+      items: const [
+        BottomNavigationBarItem(icon: Icon(Icons.storefront_outlined), label: 'Home'),
+        BottomNavigationBarItem(icon: Icon(Icons.shopping_cart_outlined), label: 'Cart'),
+        BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
+        BottomNavigationBarItem(icon: Icon(Icons.help_outline), label: 'Help'),
+      ],
     );
   }
 
@@ -206,11 +213,11 @@ class _NewMainScreenState extends State<NewMainScreen> {
           ),
         ),
         const SizedBox(width: AppSpacing.sm),
-        Column(
+        const Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Sunder Garments',
               style: TextStyle(
                 color: AppColors.textPrimary,
@@ -218,7 +225,7 @@ class _NewMainScreenState extends State<NewMainScreen> {
                 fontWeight: FontWeight.w700,
               ),
             ),
-            const Text(
+            Text(
               'GST: 19AIQPD5899L1Z8',
               style: TextStyle(
                 color: AppColors.textSecondary,
@@ -229,208 +236,6 @@ class _NewMainScreenState extends State<NewMainScreen> {
           ],
         ),
       ],
-    );
-  }
-
-  Widget _buildNavigationCards() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: Text(
-            'Explore',
-            style: TextStyle(
-              fontSize: 20.0,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
-            ),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-          child: GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 2,
-            crossAxisSpacing: AppSpacing.md,
-            mainAxisSpacing: AppSpacing.md,
-            childAspectRatio: 1.3,
-            children: [
-              _buildNavigationCard(
-                icon: Icons.inventory_2_outlined,
-                title: 'All Products',
-                subtitle: 'Browse our collection',
-                onTap: () => Get.to(() => const EnhancedAllProductsScreen()),
-              ),
-              _buildNavigationCard(
-                icon: Icons.person_outline,
-                title: 'My Profile',
-                subtitle: 'Orders & settings',
-                onTap: () => Get.to(() => const ProfileScreen()),
-              ),
-              _buildNavigationCard(
-                icon: Icons.shopping_cart_outlined,
-                title: 'My Cart',
-                subtitle: 'Review your items',
-                onTap: () => Get.to(() => const cart_screen.CartScreen()),
-              ),
-              _buildNavigationCard(
-                icon: Icons.help_outline,
-                title: 'Help & Support',
-                subtitle: 'Get assistance',
-                onTap: () => _showSupportOptions(),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  // FIX: previously each card had its own hardcoded rainbow color
-  // (blue/green/orange/purple) with matching shadow - four unrelated
-  // colors on one screen, none of them the brand color. Every card
-  // now shares one consistent surface treatment, distinguished by
-  // icon and label only - brand red appears once, on the icon chip,
-  // reserved for that single accent rather than spread across four
-  // different hues.
-  Widget _buildNavigationCard({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        child: Container(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(AppRadius.lg),
-            border: Border.all(color: AppColors.surfaceBorder),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.sm),
-                decoration: BoxDecoration(
-                  color: AppColors.brandTintBg,
-                  borderRadius: BorderRadius.circular(AppRadius.sm),
-                ),
-                child: Icon(
-                  icon,
-                  color: AppColors.brandTintFg,
-                  size: 22.0,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Flexible(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 13.0,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(height: 2.0),
-              Flexible(
-                child: Text(
-                  subtitle,
-                  style: const TextStyle(
-                    fontSize: 11.0,
-                    color: AppColors.textSecondary,
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLogoutSection() {
-    return Container(
-      padding: EdgeInsets.only(
-        left: AppSpacing.md,
-        right: AppSpacing.md,
-        top: AppSpacing.md,
-        bottom: AppSpacing.md + MediaQuery.of(context).padding.bottom,
-      ),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(top: BorderSide(color: AppColors.surfaceBorder)),
-      ),
-      child: Column(
-        children: [
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () => _showLogoutDialog(),
-              icon: const Icon(Icons.logout, size: 18, color: AppColors.dangerFg),
-              label: const Text('Logout'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.dangerFg,
-                side: const BorderSide(color: AppColors.dangerBg),
-                backgroundColor: AppColors.dangerBg,
-                padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-              ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          const Text(
-            '© 2024 Sunder Garments. All rights reserved.',
-            style: TextStyle(
-              fontSize: 12.0,
-              color: AppColors.textSecondary,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showLogoutDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await FirebaseAuth.instance.signOut();
-              Get.offAll(() => WelcomeScreen());
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.dangerFg,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Logout'),
-          ),
-        ],
-      ),
     );
   }
 
