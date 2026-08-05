@@ -5,12 +5,15 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
-import '../../utils/app-constant.dart';
 import '../../models/product-model.dart';
 import '../../models/cart-model.dart';
-import '../../models/categories-model.dart';
-import '../../widgets/modern/simple_product_card.dart';
-import '../../widgets/modern/simple_loading_states.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_spacing.dart';
+import '../../theme/app_radius.dart';
+import '../../widgets/app_product_card.dart';
+import '../../widgets/app_empty_state.dart';
+import '../../widgets/app_error_state.dart';
+import '../../widgets/skeleton_box.dart';
 import 'cart-screen.dart';
 import 'product-details-screen.dart';
 
@@ -73,29 +76,13 @@ class _EnhancedAllProductsScreenState extends State<EnhancedAllProductsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text(
-          'All Products',
-          style: TextStyle(color: AppConstant.appTextColor),
-        ),
-        backgroundColor: AppConstant.appMainColor,
-        iconTheme: const IconThemeData(color: AppConstant.appTextColor),
-        elevation: 2.0,
+        title: const Text('All Products'),
         actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 16.0),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12.0),
-            ),
-            child: IconButton(
-              onPressed: () => Get.to(() => const CartScreen()),
-              icon: const Icon(
-                Icons.shopping_cart_outlined,
-                color: AppConstant.appTextColor,
-              ),
-            ),
+          IconButton(
+            onPressed: () => Get.to(() => const CartScreen()),
+            icon: const Icon(Icons.shopping_cart_outlined),
           ),
         ],
       ),
@@ -117,58 +104,36 @@ class _EnhancedAllProductsScreenState extends State<EnhancedAllProductsScreen> {
 
   Widget _buildSearchAndFilterSection() {
     return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.all(16.0),
+      color: AppColors.surface,
+      padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
         children: [
           // Search Bar
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(12.0),
-              border: Border.all(
-                color: Colors.grey.shade300,
-                width: 1.0,
-              ),
+          TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Search products...',
+              prefixIcon: const Icon(Icons.search, color: AppColors.textSecondary),
+              suffixIcon: searchQuery.isNotEmpty
+                ? IconButton(
+                    onPressed: () {
+                      setState(() {
+                        searchQuery = '';
+                        _searchController.clear();
+                      });
+                    },
+                    icon: const Icon(Icons.clear, color: AppColors.textSecondary),
+                  )
+                : null,
             ),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search products...',
-                hintStyle: TextStyle(color: Colors.grey.shade500),
-                prefixIcon: Icon(
-                  Icons.search,
-                  color: Colors.grey.shade500,
-                ),
-                suffixIcon: searchQuery.isNotEmpty
-                  ? IconButton(
-                      onPressed: () {
-                        setState(() {
-                          searchQuery = '';
-                          _searchController.clear();
-                        });
-                      },
-                      icon: Icon(
-                        Icons.clear,
-                        color: Colors.grey.shade500,
-                      ),
-                    )
-                  : null,
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16.0,
-                  vertical: 12.0,
-                ),
-              ),
-              onChanged: (value) {
-                setState(() {
-                  searchQuery = value.toLowerCase();
-                });
-              },
-            ),
+            onChanged: (value) {
+              setState(() {
+                searchQuery = value.toLowerCase();
+              });
+            },
           ),
           
-          const SizedBox(height: 16.0),
+          const SizedBox(height: AppSpacing.md),
           
           // Category Filter Chips
           _buildCategoryFilters(),
@@ -195,15 +160,9 @@ class _EnhancedAllProductsScreenState extends State<EnhancedAllProductsScreen> {
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: 5,
-              itemBuilder: (context, index) => Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                child: Chip(
-                  label: Container(
-                    width: 80,
-                    height: 20,
-                    color: Colors.grey.shade200,
-                  ),
-                ),
+              itemBuilder: (context, index) => const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 4.0),
+                child: SkeletonBox(width: 80, height: 32, borderRadius: 20),
               ),
             ),
           );
@@ -247,26 +206,32 @@ class _EnhancedAllProductsScreenState extends State<EnhancedAllProductsScreen> {
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           print('Products stream error: ${snapshot.error}');
-          return SimpleLoadingStates.errorState(
-            title: 'Error Loading Products',
-            message: 'Please try again later',
-            icon: Icons.error_outline,
+          return const AppErrorState(
+            title: 'Could not load products',
+            message: 'Please check your connection and try again.',
           );
         }
 
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return SimpleLoadingStates.loadingState(
-            title: 'Loading Products',
-            message: 'Please wait...',
-            icon: Icons.shopping_bag_outlined,
+          return GridView.builder(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              childAspectRatio: 0.75,
+              crossAxisSpacing: AppSpacing.md,
+              mainAxisSpacing: AppSpacing.md,
+            ),
+            itemCount: 6,
+            itemBuilder: (context, index) => const ProductCardSkeleton(),
           );
         }
 
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return SimpleLoadingStates.emptyState(
-            title: 'No Products Found',
-            message: 'Try adjusting your search or filter',
+          return const AppEmptyState(
             icon: Icons.search_off,
+            title: 'No products found',
+            message: 'Try adjusting your search or filter',
           );
         }
         
@@ -282,22 +247,22 @@ class _EnhancedAllProductsScreenState extends State<EnhancedAllProductsScreen> {
         print('After filtering: ${products.length} products');
 
         if (products.isEmpty) {
-          return SimpleLoadingStates.emptyState(
-            title: 'No Products Found',
-            message: 'Try adjusting your search or filter',
+          return const AppEmptyState(
             icon: Icons.search_off,
+            title: 'No products found',
+            message: 'Try adjusting your search or filter',
           );
         }
 
         print('Building GridView with ${products.length} products');
         return GridView.builder(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(AppSpacing.md),
           physics: const AlwaysScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
-            childAspectRatio: 0.75,
-            crossAxisSpacing: 16.0,
-            mainAxisSpacing: 16.0,
+            childAspectRatio: 0.68,
+            crossAxisSpacing: AppSpacing.md,
+            mainAxisSpacing: AppSpacing.md,
           ),
           itemCount: products.length,
           itemBuilder: (context, index) {
@@ -322,12 +287,11 @@ class _EnhancedAllProductsScreenState extends State<EnhancedAllProductsScreen> {
             };
             final productModel = ProductModel.fromMap(safeProductData);
 
-            return SimpleProductCard(
+            return AppProductCard(
               product: productModel,
               onTap: () => Get.to(() => ProductDetailsScreen(productModel: productModel)),
               onAddToCart: () => _handleAddToCart(productModel),
-              isLoading: _addingToCartProducts.contains(productModel.productId),
-              showFavorite: false,
+              isAddingToCart: _addingToCartProducts.contains(productModel.productId),
             );
           },
         );
@@ -336,62 +300,16 @@ class _EnhancedAllProductsScreenState extends State<EnhancedAllProductsScreen> {
   }
 
   Widget _buildComingSoonState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              color: AppConstant.appMainColor.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.storefront_outlined,
-              size: 60,
-              color: AppConstant.appMainColor,
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'Products Coming Soon!',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: AppConstant.appMainColor,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'We\'re working hard to bring you amazing products.\nStay tuned for updates!',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey.shade600,
-              height: 1.5,
-            ),
-          ),
-          const SizedBox(height: 32),
-          ElevatedButton.icon(
-            onPressed: () {
-              setState(() {
-                selectedCategoryId = null; // Reset to all products
-              });
-            },
-            icon: const Icon(Icons.arrow_back),
-            label: const Text('Browse All Products'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppConstant.appMainColor,
-              foregroundColor: AppConstant.appTextColor,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-        ],
-      ),
+    return AppEmptyState(
+      icon: Icons.storefront_outlined,
+      title: 'Products coming soon',
+      message: "We're working hard to bring you amazing products.\nStay tuned for updates!",
+      actionLabel: 'Browse all products',
+      onAction: () {
+        setState(() {
+          selectedCategoryId = null;
+        });
+      },
     );
   }
 
@@ -778,12 +696,12 @@ class _CategoryFilterListState extends State<CategoryFilterList> {
               widget.onCategorySelected(null);
             }
           },
-          selectedColor: AppConstant.appMainColor.withOpacity(0.2),
-          checkmarkColor: AppConstant.appMainColor,
+          selectedColor: AppColors.brand.withOpacity(0.2),
+          checkmarkColor: AppColors.brand,
           labelStyle: TextStyle(
             color: widget.selectedCategoryId == null 
-              ? AppConstant.appMainColor 
-              : Colors.grey.shade700,
+              ? AppColors.brand 
+              : AppColors.textSecondary,
             fontWeight: widget.selectedCategoryId == null 
               ? FontWeight.bold 
               : FontWeight.normal,
@@ -812,8 +730,8 @@ class _CategoryFilterListState extends State<CategoryFilterList> {
               categoryName,
               style: TextStyle(
                 color: isSelected 
-                  ? AppConstant.appMainColor 
-                  : Colors.grey.shade700,
+                  ? AppColors.brand 
+                  : AppColors.textSecondary,
                 fontWeight: isSelected 
                   ? FontWeight.bold 
                   : FontWeight.normal,
@@ -824,14 +742,14 @@ class _CategoryFilterListState extends State<CategoryFilterList> {
               print('Category selected: $categoryName (ID: $categoryId, Selected: $selected)');
               widget.onCategorySelected(selected ? categoryId : null);
             },
-            selectedColor: AppConstant.appMainColor.withOpacity(0.2),
-            checkmarkColor: AppConstant.appMainColor,
-            backgroundColor: Colors.grey.shade100,
+            selectedColor: AppColors.brand.withOpacity(0.2),
+            checkmarkColor: AppColors.brand,
+            backgroundColor: AppColors.surfaceMuted,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
               side: BorderSide(
                 color: isSelected 
-                  ? AppConstant.appMainColor 
+                  ? AppColors.brand 
                   : Colors.transparent,
               ),
             ),
