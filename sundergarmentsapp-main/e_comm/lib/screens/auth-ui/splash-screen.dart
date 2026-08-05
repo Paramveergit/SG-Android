@@ -7,6 +7,7 @@ import 'package:e_comm/screens/admin-panel/admin-main-screen.dart';
 import 'package:e_comm/screens/auth-ui/sign-in-screen.dart';
 import 'package:e_comm/screens/user-panel/new-main-screen.dart';
 import 'package:e_comm/utils/app-constant.dart';
+import 'package:e_comm/theme/app_colors.dart';
 import 'package:e_comm/widgets/animated-logo-widget.dart';
 import 'package:e_comm/widgets/animated-text-widget.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -199,7 +200,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppConstant.appScendoryColor,
+      backgroundColor: AppColors.brandDark,
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -219,10 +220,10 @@ class _SplashScreenState extends State<SplashScreen>
                         scaleAnimation: _textScaleAnimation,
                         opacityAnimation: _textOpacityAnimation,
                         startAnimation: _startTextAnimation,
-                        textStyle: TextStyle(
+                        textStyle: const TextStyle(
                           fontSize: 36,
                           fontWeight: FontWeight.bold,
-                          color: AppConstant.appTextColor,
+                          color: AppColors.textOnBrand,
                           letterSpacing: 2.0,
                         ),
                       ),
@@ -251,7 +252,7 @@ class _SplashScreenState extends State<SplashScreen>
                       child: Text(
                         AppConstant.appPoweredBy,
                         style: TextStyle(
-                          color: AppConstant.appTextColor.withOpacity(0.7),
+                          color: AppColors.textOnBrand.withOpacity(0.7),
                           fontSize: 14.0,
                           fontWeight: FontWeight.w500,
                           letterSpacing: 1.0,
