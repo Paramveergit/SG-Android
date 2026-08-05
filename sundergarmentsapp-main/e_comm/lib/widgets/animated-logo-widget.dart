@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:e_comm/utils/app-constant.dart';
+import '../theme/app_colors.dart';
 
 class AnimatedLogoWidget extends StatefulWidget {
   final Animation<double> scaleAnimation;
@@ -37,29 +37,8 @@ class _AnimatedLogoWidgetState extends State<AnimatedLogoWidget> {
                 width: 140,
                 height: 140,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      AppConstant.appTextColor,
-                      AppConstant.appTextColor.withOpacity(0.9),
-                    ],
-                  ),
+                  color: AppColors.textOnBrand,
                   borderRadius: BorderRadius.circular(25),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
-                      blurRadius: 15,
-                      offset: Offset(0, 8),
-                      spreadRadius: 2,
-                    ),
-                    BoxShadow(
-                      color: AppConstant.appMainColor.withOpacity(0.2),
-                      blurRadius: 20,
-                      offset: Offset(0, 0),
-                      spreadRadius: 5,
-                    ),
-                  ],
                 ),
                 child: Center(
                   child: Image.asset(

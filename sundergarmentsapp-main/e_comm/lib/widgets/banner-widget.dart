@@ -3,7 +3,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:e_comm/controllers/banners-controller.dart';
-import 'package:e_comm/utils/app-constant.dart';
+import '../theme/app_colors.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -57,7 +57,7 @@ class _BannerWidgetState extends State<BannerWidget> {
       height: Get.height * 0.35,
       margin: const EdgeInsets.symmetric(horizontal: 16.0),
       decoration: BoxDecoration(
-        color: Colors.grey.shade200,
+        color: AppColors.surfaceMuted,
         borderRadius: BorderRadius.circular(12.0),
       ),
       child: const Center(
@@ -69,7 +69,7 @@ class _BannerWidgetState extends State<BannerWidget> {
             Text(
               'Loading banners...',
               style: TextStyle(
-                color: Colors.grey,
+                color: AppColors.textSecondary,
                 fontSize: 12.0,
               ),
             ),
@@ -84,9 +84,9 @@ class _BannerWidgetState extends State<BannerWidget> {
       height: Get.height * 0.35,
       margin: const EdgeInsets.symmetric(horizontal: 16.0),
       decoration: BoxDecoration(
-        color: Colors.grey.shade100,
+        color: AppColors.surfaceMuted,
         borderRadius: BorderRadius.circular(12.0),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: AppColors.surfaceBorder),
       ),
       child: Center(
         child: Column(
@@ -95,13 +95,13 @@ class _BannerWidgetState extends State<BannerWidget> {
             Icon(
               Icons.error_outline,
               size: 48.0,
-              color: Colors.grey.shade400,
+              color: AppColors.textSecondary,
             ),
             const SizedBox(height: 8.0),
             Text(
               controller.errorMessage.value,
               style: TextStyle(
-                color: Colors.grey.shade600,
+                color: AppColors.textSecondary,
                 fontSize: 14.0,
               ),
               textAlign: TextAlign.center,
@@ -112,8 +112,6 @@ class _BannerWidgetState extends State<BannerWidget> {
               icon: const Icon(Icons.refresh, size: 16.0),
               label: const Text('Retry'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppConstant.appMainColor,
-                foregroundColor: AppConstant.appTextColor,
                 padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
               ),
             ),
@@ -128,9 +126,9 @@ class _BannerWidgetState extends State<BannerWidget> {
       height: Get.height * 0.35,
       margin: const EdgeInsets.symmetric(horizontal: 16.0),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: AppColors.background,
         borderRadius: BorderRadius.circular(12.0),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: AppColors.surfaceMuted),
       ),
       child: Center(
         child: Column(
@@ -139,13 +137,13 @@ class _BannerWidgetState extends State<BannerWidget> {
             Icon(
               Icons.image_outlined,
               size: 48.0,
-              color: Colors.grey.shade400,
+              color: AppColors.textSecondary,
             ),
             const SizedBox(height: 8.0),
             Text(
               'No banners available',
               style: TextStyle(
-                color: Colors.grey.shade600,
+                color: AppColors.textSecondary,
                 fontSize: 14.0,
               ),
             ),
@@ -209,7 +207,7 @@ class _BannerWidgetState extends State<BannerWidget> {
   Widget _buildImagePlaceholder() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.grey.shade200,
+        color: AppColors.surfaceMuted,
         borderRadius: BorderRadius.circular(12.0),
       ),
       child: const Center(
@@ -221,7 +219,7 @@ class _BannerWidgetState extends State<BannerWidget> {
             Text(
               'Loading...',
               style: TextStyle(
-                color: Colors.grey,
+                color: AppColors.textSecondary,
                 fontSize: 12.0,
               ),
             ),
@@ -234,9 +232,9 @@ class _BannerWidgetState extends State<BannerWidget> {
   Widget _buildImageError() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.grey.shade100,
+        color: AppColors.surfaceMuted,
         borderRadius: BorderRadius.circular(12.0),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: AppColors.surfaceBorder),
       ),
       child: const Center(
         child: Column(
@@ -245,13 +243,13 @@ class _BannerWidgetState extends State<BannerWidget> {
             Icon(
               Icons.image_not_supported_outlined,
               size: 48.0,
-              color: Colors.grey,
+              color: AppColors.textSecondary,
             ),
             SizedBox(height: 8.0),
             Text(
               'Image not available',
               style: TextStyle(
-                color: Colors.grey,
+                color: AppColors.textSecondary,
                 fontSize: 12.0,
               ),
             ),

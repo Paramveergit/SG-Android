@@ -3,8 +3,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../utils/app-constant.dart';
 import '../controllers/welcome-popup-controller.dart';
+import '../theme/app_colors.dart';
 
 class WelcomePopupWidget extends StatelessWidget {
   const WelcomePopupWidget({super.key});
@@ -24,7 +24,7 @@ class WelcomePopupWidget extends StatelessWidget {
 
   Widget _buildWelcomePopup(BuildContext context, WelcomePopupController controller) {
     return Material(
-      color: Colors.black.withOpacity(0.5),
+      color: AppColors.textPrimary.withOpacity(0.5),
       child: Stack(
         children: [
           // Backdrop
@@ -42,15 +42,8 @@ class WelcomePopupWidget extends StatelessWidget {
             child: Container(
               margin: const EdgeInsets.all(32.0),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.surface,
                 borderRadius: BorderRadius.circular(24.0),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
-                    blurRadius: 20.0,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -58,16 +51,9 @@ class WelcomePopupWidget extends StatelessWidget {
                   // Header with gradient
                   Container(
                     padding: const EdgeInsets.all(24.0),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          AppConstant.appMainColor,
-                          AppConstant.appScendoryColor,
-                        ],
-                      ),
-                      borderRadius: const BorderRadius.only(
+                    decoration: const BoxDecoration(
+                      color: AppColors.brand,
+                      borderRadius: BorderRadius.only(
                         topLeft: Radius.circular(24.0),
                         topRight: Radius.circular(24.0),
                       ),
@@ -78,30 +64,22 @@ class WelcomePopupWidget extends StatelessWidget {
                         Container(
                           width: 80.0,
                           height: 80.0,
-                          decoration: BoxDecoration(
+                          decoration: const BoxDecoration(
                             shape: BoxShape.circle,
-                            border: Border.all(
-                              color: Colors.white,
-                              width: 4.0,
+                            border: Border.fromBorderSide(
+                              BorderSide(color: AppColors.textOnBrand, width: 4.0),
                             ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
-                                blurRadius: 10.0,
-                                offset: const Offset(0, 5),
-                              ),
-                            ],
                           ),
                           child: CircleAvatar(
                             radius: 36.0,
-                            backgroundColor: Colors.white,
+                            backgroundColor: AppColors.surface,
                             backgroundImage: controller.userPhotoURL != null 
                               ? NetworkImage(controller.userPhotoURL!) 
                               : null,
                             child: controller.userPhotoURL == null 
-                              ? Icon(
+                              ? const Icon(
                                   Icons.person,
-                                  color: AppConstant.appMainColor,
+                                  color: AppColors.brand,
                                   size: 40.0,
                                 )
                               : null,
@@ -111,12 +89,12 @@ class WelcomePopupWidget extends StatelessWidget {
                         const SizedBox(height: 16.0),
                         
                         // Welcome Text
-                        Text(
+                        const Text(
                           'Welcome back!',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 20.0,
                             fontWeight: FontWeight.w600,
-                            color: Colors.white,
+                            color: AppColors.textOnBrand,
                           ),
                         ),
                         
@@ -127,7 +105,7 @@ class WelcomePopupWidget extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 24.0,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                            color: AppColors.textOnBrand,
                           ),
                         ),
                       ],
@@ -140,23 +118,23 @@ class WelcomePopupWidget extends StatelessWidget {
                     child: Column(
                       children: [
                         // Welcome Message
-                        Text(
+                        const Text(
                           'We\'re excited to have you back!',
                           style: TextStyle(
                             fontSize: 18.0,
                             fontWeight: FontWeight.w600,
-                            color: Colors.grey.shade800,
+                            color: AppColors.textPrimary,
                           ),
                           textAlign: TextAlign.center,
                         ),
                         
                         const SizedBox(height: 12.0),
                         
-                        Text(
+                        const Text(
                           'Discover our latest collection of premium garments crafted just for you.',
                           style: TextStyle(
                             fontSize: 14.0,
-                            color: Colors.grey.shade600,
+                            color: AppColors.textSecondary,
                             height: 1.5,
                           ),
                           textAlign: TextAlign.center,
@@ -194,17 +172,8 @@ class WelcomePopupWidget extends StatelessWidget {
                           width: double.infinity,
                           child: ElevatedButton(
                             onPressed: () => controller.markWelcomeAsShown(),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppConstant.appMainColor,
-                              foregroundColor: AppConstant.appTextColor,
-                              padding: const EdgeInsets.symmetric(vertical: 16.0),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12.0),
-                              ),
-                              elevation: 2.0,
-                            ),
                             child: const Text(
-                              'Start Shopping',
+                              'Start shopping',
                               style: TextStyle(
                                 fontSize: 16.0,
                                 fontWeight: FontWeight.w600,
@@ -218,10 +187,10 @@ class WelcomePopupWidget extends StatelessWidget {
                         // Skip Button
                         TextButton(
                           onPressed: () => controller.markWelcomeAsShown(),
-                          child: Text(
+                          child: const Text(
                             'Skip for now',
                             style: TextStyle(
-                              color: Colors.grey.shade600,
+                              color: AppColors.textSecondary,
                               fontSize: 14.0,
                             ),
                           ),
@@ -248,12 +217,12 @@ class WelcomePopupWidget extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(8.0),
           decoration: BoxDecoration(
-            color: AppConstant.appMainColor.withOpacity(0.1),
+            color: AppColors.brandTintBg,
             borderRadius: BorderRadius.circular(8.0),
           ),
           child: Icon(
             icon,
-            color: AppConstant.appMainColor,
+            color: AppColors.brand,
             size: 20.0,
           ),
         ),
@@ -269,14 +238,14 @@ class WelcomePopupWidget extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 14.0,
                   fontWeight: FontWeight.w600,
-                  color: Colors.black87,
+                  color: AppColors.textPrimary,
                 ),
               ),
               Text(
                 subtitle,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 12.0,
-                  color: Colors.grey.shade600,
+                  color: AppColors.textSecondary,
                 ),
               ),
             ],
