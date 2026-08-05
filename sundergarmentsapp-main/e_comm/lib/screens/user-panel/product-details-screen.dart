@@ -5,7 +5,6 @@ import 'package:carousel_slider/carousel_slider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:e_comm/models/product-model.dart';
 import 'package:e_comm/screens/user-panel/cart-screen.dart' as cart_screen;
-import 'package:e_comm/utils/app-constant.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -14,6 +13,9 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../controllers/rating-controller.dart';
 import '../../models/cart-model.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_spacing.dart';
+import '../../theme/app_radius.dart';
 
 class ProductDetailsScreen extends StatefulWidget {
   ProductModel productModel;
@@ -128,35 +130,35 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
     if (rows.isEmpty) return const SizedBox.shrink();
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 8.0),
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(8.0),
+        border: Border.all(color: AppColors.surfaceBorder),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
       ),
       child: Column(
         children: rows.asMap().entries.map((entry) {
           final i = entry.key;
           final row = entry.value;
           return Container(
-            color: i.isEven ? Colors.grey.shade50 : Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+            color: i.isEven ? AppColors.surfaceMuted : AppColors.surface,
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
             child: Row(
               children: [
                 SizedBox(
                   width: 110,
                   child: Text(
                     row.key,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 13.0,
                       fontWeight: FontWeight.w600,
-                      color: Colors.black87,
+                      color: AppColors.textPrimary,
                     ),
                   ),
                 ),
                 Expanded(
                   child: Text(
                     row.value,
-                    style: TextStyle(fontSize: 13.0, color: Colors.grey.shade700),
+                    style: const TextStyle(fontSize: 13.0, color: AppColors.textSecondary),
                   ),
                 ),
               ],
@@ -180,9 +182,9 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
             padding: const EdgeInsets.only(bottom: 8.0),
             child: Text(
               parsedDetails['quantity']!,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 16.0,
-                color: Colors.grey.shade700,
+                color: AppColors.textSecondary,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -194,9 +196,9 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
             padding: const EdgeInsets.only(bottom: 8.0),
             child: Text(
               parsedDetails['size']!,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 16.0,
-                color: Colors.grey.shade700,
+                color: AppColors.textSecondary,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -208,9 +210,9 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
             padding: const EdgeInsets.only(bottom: 8.0),
             child: Text(
               parsedDetails['otherInfo']!,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 14.0,
-                color: Colors.grey.shade600,
+                color: AppColors.textSecondary,
                 height: 1.4,
               ),
             ),
@@ -246,7 +248,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
     );
     _highlightAnimation = ColorTween(
       begin: Colors.transparent,
-      end: Colors.red.withOpacity(0.3),
+      end: AppColors.dangerBg,
     ).animate(CurvedAnimation(
       parent: _highlightController,
       curve: Curves.easeInOut,
@@ -301,12 +303,9 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
           children: [
             GestureDetector(
               onTap: () => Get.to(() => cart_screen.CartScreen()),
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Icon(
-                  Icons.shopping_cart,
-                  color: AppConstant.appTextColor,
-                ),
+              child: const Padding(
+                padding: EdgeInsets.all(8.0),
+                child: Icon(Icons.shopping_cart),
               ),
             ),
             if (cartItemCount > 0)
@@ -314,19 +313,19 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
                 right: 4,
                 top: 4,
                 child: Container(
-                  padding: EdgeInsets.all(2),
+                  padding: const EdgeInsets.all(2),
                   decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(10),
+                    color: AppColors.brand,
+                    borderRadius: BorderRadius.circular(AppRadius.full),
                   ),
-                  constraints: BoxConstraints(
+                  constraints: const BoxConstraints(
                     minWidth: 16,
                     minHeight: 16,
                   ),
                   child: Text(
                     cartItemCount.toString(),
-                    style: TextStyle(
-                      color: Colors.white,
+                    style: const TextStyle(
+                      color: AppColors.textOnBrand,
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
                     ),
@@ -354,19 +353,19 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
             children: [
               Text(
                 'Qty: ',
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 16.0,
                   fontWeight: FontWeight.w500,
-                  color: Colors.grey.shade700,
+                  color: AppColors.textSecondary,
                 ),
               ),
               Container(
                 decoration: BoxDecoration(
                   border: Border.all(
-                    color: _quantityError ? Colors.red : Colors.black,
+                    color: _quantityError ? AppColors.dangerFg : AppColors.surfaceBorder,
                     width: 1.0,
                   ),
-                  borderRadius: BorderRadius.circular(4.0),
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -387,9 +386,9 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
                         height: 32,
                         decoration: BoxDecoration(
                           color: (_selectedQuantity != null && _selectedQuantity! > 1)
-                              ? Colors.black 
-                              : Colors.grey.shade300,
-                          borderRadius: BorderRadius.only(
+                              ? AppColors.textPrimary 
+                              : AppColors.surfaceMuted,
+                          borderRadius: const BorderRadius.only(
                             topLeft: Radius.circular(3),
                             bottomLeft: Radius.circular(3),
                           ),
@@ -397,8 +396,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
                         child: Icon(
                           Icons.remove,
                           color: (_selectedQuantity != null && _selectedQuantity! > 1)
-                              ? Colors.white 
-                              : Colors.grey.shade500,
+                              ? AppColors.textOnBrand 
+                              : AppColors.textSecondary,
                           size: 16,
                         ),
                       ),
@@ -407,10 +406,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
                     Container(
                       width: 50,
                       height: 32,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
+                      decoration: const BoxDecoration(
+                        color: AppColors.surface,
                         border: Border.symmetric(
-                          vertical: BorderSide(color: Colors.black, width: 1.0),
+                          vertical: BorderSide(color: AppColors.surfaceBorder, width: 1.0),
                         ),
                       ),
                       child: Center(
@@ -430,14 +429,14 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
                             isDense: true,
                             hintText: 'Qty',
                             hintStyle: TextStyle(
-                              color: Colors.grey.shade400,
+                              color: AppColors.textSecondary,
                               fontSize: 14,
                             ),
                           ),
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 16.0,
                             fontWeight: FontWeight.bold,
-                            color: AppConstant.appMainColor,
+                            color: AppColors.brand,
                             height: 1.0,
                           ),
                         onChanged: (value) {
@@ -472,15 +471,15 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
                         width: 32,
                         height: 32,
                         decoration: BoxDecoration(
-                          color: AppConstant.appMainColor,
-                          borderRadius: BorderRadius.only(
+                          color: AppColors.brand,
+                          borderRadius: const BorderRadius.only(
                             topRight: Radius.circular(3),
                             bottomRight: Radius.circular(3),
                           ),
                         ),
-                        child: Icon(
+                        child: const Icon(
                           Icons.add,
-                          color: Colors.white,
+                          color: AppColors.textOnBrand,
                           size: 16,
                         ),
                       ),
@@ -501,12 +500,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
         CalculateProductRatingController(widget.productModel.productId));
     return Scaffold(
       appBar: AppBar(
-        iconTheme: IconThemeData(color: AppConstant.appTextColor),
-        backgroundColor: AppConstant.appMainColor,
-        title: Text(
-          "Product Details",
-          style: TextStyle(color: AppConstant.appTextColor),
-        ),
+        title: const Text("Product Details"),
         actions: [
           _buildCartIconWithBadge(),
         ],
@@ -536,9 +530,9 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
                               placeholder: (context, url) => Center(
                                 child: CupertinoActivityIndicator(),
                               ),
-                              errorWidget: (context, url, error) => Icon(
+                              errorWidget: (context, url, error) => const Icon(
                                 Icons.error,
-                                color: Colors.red,
+                                color: AppColors.dangerFg,
                               ),
                             ),
                           ),
@@ -551,8 +545,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
                         imageUrl: imageUrl,
                         fit: BoxFit.cover,
                         width: Get.width - 20,
-                        placeholder: (context, url) => ColoredBox(
-                          color: Colors.white,
+                        placeholder: (context, url) => const ColoredBox(
+                          color: AppColors.surfaceMuted,
                           child: Center(
                             child: CupertinoActivityIndicator(),
                           ),
@@ -574,12 +568,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
                 height: Get.height / 20,
               ),
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
                 child: Card(
-                  elevation: 5.0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10.0),
-                  ),
                   child: Column(
                     children: [
                       Padding(
@@ -588,10 +578,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
                           alignment: Alignment.topLeft,
                           child: Text(
                             widget.productModel.productName,
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 24.0,
                               fontWeight: FontWeight.bold,
-                              color: Colors.black87,
+                              color: AppColors.textPrimary,
                               letterSpacing: 0.5,
                             ),
                           ),
@@ -607,18 +597,18 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
                                   children: [
                                     Text(
                                       "₹${widget.productModel.salePrice}",
-                                      style: TextStyle(
+                                      style: const TextStyle(
                                         fontSize: 20.0,
                                         fontWeight: FontWeight.bold,
-                                        color: Colors.green.shade700,
+                                        color: AppColors.successFg,
                                       ),
                                     ),
-                                    SizedBox(width: 8.0),
+                                    const SizedBox(width: 8.0),
                                     Text(
                                       "₹${widget.productModel.fullPrice}",
-                                      style: TextStyle(
+                                      style: const TextStyle(
                                         fontSize: 16.0,
-                                        color: Colors.grey.shade500,
+                                        color: AppColors.textSecondary,
                                         decoration: TextDecoration.lineThrough,
                                       ),
                                     ),
@@ -626,10 +616,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
                                 )
                               : Text(
                                   "₹${widget.productModel.fullPrice}",
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     fontSize: 20.0,
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.green.shade700,
+                                    color: AppColors.successFg,
                                   ),
                                 ),
                         ),
@@ -648,15 +638,15 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
                                     widget.productModel.categoryId, 
                                     widget.productModel.categoryName
                                   ),
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     fontSize: 16.0,
-                                    color: Colors.grey.shade700,
+                                    color: AppColors.textSecondary,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
                               ),
                             ),
-                            SizedBox(width: 16.0),
+                            const SizedBox(width: 16.0),
                             _buildQuantitySelector(),
                           ],
                         ),
@@ -687,12 +677,12 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
                                     width: Get.width * 0.7,
                                     height: Get.height / 16,
                                     decoration: BoxDecoration(
-                                      color: AppConstant.appScendoryColor,
-                                      borderRadius: BorderRadius.circular(20.0),
+                                      color: AppColors.brand,
+                                      borderRadius: BorderRadius.circular(AppRadius.lg),
                                     ),
                                     child: TextButton(
                                       child: _isAddingToCart
-                                        ? Row(
+                                        ? const Row(
                                             mainAxisAlignment: MainAxisAlignment.center,
                                             children: [
                                               SizedBox(
@@ -701,7 +691,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
                                                 child: CircularProgressIndicator(
                                                   strokeWidth: 2,
                                                   valueColor: AlwaysStoppedAnimation<Color>(
-                                                    AppConstant.appTextColor,
+                                                    AppColors.textOnBrand,
                                                   ),
                                                 ),
                                               ),
@@ -709,15 +699,15 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
                                               Text(
                                                 "Adding...",
                                                 style: TextStyle(
-                                                  color: AppConstant.appTextColor,
+                                                  color: AppColors.textOnBrand,
                                                 ),
                                               ),
                                             ],
                                           )
-                                        : Text(
+                                        : const Text(
                                             "Add to cart",
                                             style: TextStyle(
-                                              color: AppConstant.appTextColor,
+                                              color: AppColors.textOnBrand,
                                             ),
                                           ),
                                       onPressed: _isAddingToCart ? null : () async {
