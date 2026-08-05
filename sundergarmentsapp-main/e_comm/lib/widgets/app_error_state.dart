@@ -47,7 +47,7 @@ class AppErrorState extends StatelessWidget {
             ),
             if (message != null) ...[
               const SizedBox(height: AppSpacing.xs),
-              Text(
+              SelectableText(
                 message!,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
