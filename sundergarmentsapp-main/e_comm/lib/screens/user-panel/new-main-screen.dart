@@ -1,5 +1,7 @@
-// New Main Screen with Navigation Cards - No Sidebar
-// Implements modern card-based navigation as requested
+// Home screen - Warehouse Ledger, Storefront design.
+// All functional logic (shipped-order popup listener, welcome popup,
+// support sheet, logout flow) is unchanged from before - only the
+// visual layer was redesigned onto the new tokens.
 
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -10,7 +12,9 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../models/order-model.dart';
 import '../../models/order-status.dart';
 import '../../repositories/order-repository.dart';
-import '../../utils/app-constant.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_radius.dart';
+import '../../theme/app_spacing.dart';
 import '../../widgets/banner-widget.dart';
 import '../../widgets/welcome-popup-widget.dart';
 import '../../controllers/welcome-popup-controller.dart';
@@ -31,10 +35,6 @@ class _NewMainScreenState extends State<NewMainScreen> {
   final User? user = FirebaseAuth.instance.currentUser;
   late WelcomePopupController _welcomeController;
   StreamSubscription<List<OrderModel>>? _orderStatusSubscription;
-  // Orders whose "shipped" popup has already been shown (or that were
-  // already shipped when this listener first started) - without this,
-  // every unrelated change to an already-shipped order would trigger
-  // the popup again.
   final Set<String> _shippedPopupShownFor = {};
   bool _isFirstOrderSnapshot = true;
 
@@ -42,8 +42,7 @@ class _NewMainScreenState extends State<NewMainScreen> {
   void initState() {
     super.initState();
     _welcomeController = Get.put(WelcomePopupController());
-    
-    // Show welcome popup after a short delay
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Future.delayed(const Duration(milliseconds: 500), () {
         _welcomeController.showWelcomePopup();
@@ -58,9 +57,6 @@ class _NewMainScreenState extends State<NewMainScreen> {
     _orderStatusSubscription =
         OrderRepository().streamOrdersForCustomer(user!.uid).listen((orders) {
       if (_isFirstOrderSnapshot) {
-        // Don't pop up for orders that were already shipped before the
-        // app was even opened - only for ones that transition while
-        // we're actively watching.
         for (final order in orders) {
           if (order.status == OrderStatus.shipped) {
             _shippedPopupShownFor.add(order.orderId);
@@ -126,57 +122,45 @@ class _NewMainScreenState extends State<NewMainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        automaticallyImplyLeading: false, // Remove hamburger menu
+        automaticallyImplyLeading: false,
         systemOverlayStyle: const SystemUiOverlayStyle(
-          statusBarColor: AppConstant.appScendoryColor,
-          statusBarIconBrightness: Brightness.light,
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.dark,
         ),
-        backgroundColor: AppConstant.appMainColor,
-        elevation: 2.0,
-        toolbarHeight: 80.0, // Increased height for logo
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        toolbarHeight: 72.0,
         title: _buildHeaderWithLogo(),
-        centerTitle: true,
-
+        centerTitle: false,
       ),
       body: SafeArea(
         child: Stack(
           children: [
-            // Main Content
             Column(
               children: [
-                // Scrollable Content
                 Expanded(
                   child: SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
                     child: Column(
                       children: [
-                        const SizedBox(height: 16.0),
-                        
-                        // Banner Section
+                        const SizedBox(height: AppSpacing.md),
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                           child: BannerWidget(),
                         ),
-                        
-                        const SizedBox(height: 32.0),
-                        
-                        // Navigation Cards Section
+                        const SizedBox(height: AppSpacing.xl),
                         _buildNavigationCards(),
-                        
-                        const SizedBox(height: 32.0),
+                        const SizedBox(height: AppSpacing.xl),
                       ],
                     ),
                   ),
                 ),
-                
-                // Logout Section (Fixed at bottom with safe area)
                 _buildLogoutSection(),
               ],
             ),
-            
-            // Welcome Popup (overlay)
             const WelcomePopupWidget(),
           ],
         ),
@@ -186,34 +170,31 @@ class _NewMainScreenState extends State<NewMainScreen> {
 
   Widget _buildHeaderWithLogo() {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Logo
         Container(
           width: 40.0,
           height: 40.0,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8.0),
+            color: AppColors.surfaceMuted,
+            borderRadius: BorderRadius.circular(AppRadius.sm),
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(8.0),
+            borderRadius: BorderRadius.circular(AppRadius.sm),
             child: Image.asset(
               'assets/images/SG_logo.png',
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) {
                 return const Icon(
                   Icons.store,
-                  color: AppConstant.appTextColor,
+                  color: AppColors.brand,
                   size: 24.0,
                 );
               },
             ),
           ),
         ),
-        const SizedBox(width: 12.0),
-        // Title and GST Number
+        const SizedBox(width: AppSpacing.sm),
         Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -221,20 +202,17 @@ class _NewMainScreenState extends State<NewMainScreen> {
             const Text(
               'Sunder Garments',
               style: TextStyle(
-                color: AppConstant.appTextColor,
-                fontSize: 28.0,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.0,
+                color: AppColors.textPrimary,
+                fontSize: 18.0,
+                fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(height: 4.0),
-            Text(
+            const Text(
               'GST: 19AIQPD5899L1Z8',
               style: TextStyle(
-                color: AppConstant.appTextColor.withOpacity(0.8),
-                fontSize: 14.0,
+                color: AppColors.textSecondary,
+                fontSize: 12.0,
                 fontWeight: FontWeight.w500,
-                letterSpacing: 0.5,
               ),
             ),
           ],
@@ -247,62 +225,50 @@ class _NewMainScreenState extends State<NewMainScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Section Title
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           child: Text(
             'Explore',
             style: TextStyle(
-              fontSize: 24.0,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey.shade800,
+              fontSize: 20.0,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
             ),
           ),
         ),
-        
-        const SizedBox(height: 16.0),
-        
-        // Navigation Cards Grid
+        const SizedBox(height: AppSpacing.md),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
           child: GridView.count(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             crossAxisCount: 2,
-            crossAxisSpacing: 16.0,
-            mainAxisSpacing: 16.0,
+            crossAxisSpacing: AppSpacing.md,
+            mainAxisSpacing: AppSpacing.md,
             childAspectRatio: 1.3,
             children: [
               _buildNavigationCard(
                 icon: Icons.inventory_2_outlined,
                 title: 'All Products',
                 subtitle: 'Browse our collection',
-                color: Colors.blue.shade50,
-                iconColor: Colors.blue,
                 onTap: () => Get.to(() => const EnhancedAllProductsScreen()),
               ),
               _buildNavigationCard(
                 icon: Icons.person_outline,
                 title: 'My Profile',
                 subtitle: 'Orders & settings',
-                color: Colors.green.shade50,
-                iconColor: Colors.green,
                 onTap: () => Get.to(() => const ProfileScreen()),
               ),
               _buildNavigationCard(
                 icon: Icons.shopping_cart_outlined,
                 title: 'My Cart',
                 subtitle: 'Review your items',
-                color: Colors.orange.shade50,
-                iconColor: Colors.orange,
                 onTap: () => Get.to(() => const cart_screen.CartScreen()),
               ),
               _buildNavigationCard(
                 icon: Icons.help_outline,
                 title: 'Help & Support',
                 subtitle: 'Get assistance',
-                color: Colors.purple.shade50,
-                iconColor: Colors.purple,
                 onTap: () => _showSupportOptions(),
               ),
             ],
@@ -312,80 +278,68 @@ class _NewMainScreenState extends State<NewMainScreen> {
     );
   }
 
+  // FIX: previously each card had its own hardcoded rainbow color
+  // (blue/green/orange/purple) with matching shadow - four unrelated
+  // colors on one screen, none of them the brand color. Every card
+  // now shares one consistent surface treatment, distinguished by
+  // icon and label only - brand red appears once, on the icon chip,
+  // reserved for that single accent rather than spread across four
+  // different hues.
   Widget _buildNavigationCard({
     required IconData icon,
     required String title,
     required String subtitle,
-    required Color color,
-    required Color iconColor,
     required VoidCallback onTap,
   }) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16.0),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         child: Container(
-          padding: const EdgeInsets.all(12.0),
+          padding: const EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(16.0),
-            border: Border.all(
-              color: iconColor.withOpacity(0.2),
-              width: 1.0,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: iconColor.withOpacity(0.1),
-                blurRadius: 8.0,
-                offset: const Offset(0, 4),
-              ),
-            ],
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: Border.all(color: AppColors.surfaceBorder),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Icon
               Container(
-                padding: const EdgeInsets.all(8.0),
+                padding: const EdgeInsets.all(AppSpacing.sm),
                 decoration: BoxDecoration(
-                  color: iconColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8.0),
+                  color: AppColors.brandTintBg,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
                 ),
                 child: Icon(
                   icon,
-                  color: iconColor,
-                  size: 24.0,
+                  color: AppColors.brandTintFg,
+                  size: 22.0,
                 ),
               ),
-              
-              const SizedBox(height: 8.0),
-              
-              // Title
+              const SizedBox(height: AppSpacing.sm),
               Flexible(
                 child: Text(
                   title,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 13.0,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey.shade800,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
                   ),
                   textAlign: TextAlign.center,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              
               const SizedBox(height: 2.0),
-              
-              // Subtitle
               Flexible(
                 child: Text(
                   subtitle,
-                  style: TextStyle(
-                    fontSize: 10.0,
-                    color: Colors.grey.shade600,
+                  style: const TextStyle(
+                    fontSize: 11.0,
+                    color: AppColors.textSecondary,
                   ),
                   textAlign: TextAlign.center,
                   maxLines: 1,
@@ -402,51 +356,37 @@ class _NewMainScreenState extends State<NewMainScreen> {
   Widget _buildLogoutSection() {
     return Container(
       padding: EdgeInsets.only(
-        left: 16.0,
-        right: 16.0,
-        top: 16.0,
-        bottom: 16.0 + MediaQuery.of(context).padding.bottom,
+        left: AppSpacing.md,
+        right: AppSpacing.md,
+        top: AppSpacing.md,
+        bottom: AppSpacing.md + MediaQuery.of(context).padding.bottom,
       ),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8.0,
-            offset: const Offset(0, -2),
-          ),
-        ],
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        border: Border(top: BorderSide(color: AppColors.surfaceBorder)),
       ),
       child: Column(
         children: [
-          // Logout Button
           SizedBox(
             width: double.infinity,
-            child: ElevatedButton.icon(
+            child: OutlinedButton.icon(
               onPressed: () => _showLogoutDialog(),
-              icon: const Icon(Icons.logout),
+              icon: const Icon(Icons.logout, size: 18, color: AppColors.dangerFg),
               label: const Text('Logout'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red.shade50,
-                foregroundColor: Colors.red.shade700,
-                padding: const EdgeInsets.symmetric(vertical: 16.0),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12.0),
-                ),
-                elevation: 0,
-                side: BorderSide(color: Colors.red.shade200),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.dangerFg,
+                side: const BorderSide(color: AppColors.dangerBg),
+                backgroundColor: AppColors.dangerBg,
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
               ),
             ),
           ),
-          
-          const SizedBox(height: 16.0),
-          
-          // Copyright Text
-          Text(
+          const SizedBox(height: AppSpacing.sm),
+          const Text(
             '© 2024 Sunder Garments. All rights reserved.',
             style: TextStyle(
               fontSize: 12.0,
-              color: Colors.grey.shade500,
+              color: AppColors.textSecondary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -473,7 +413,7 @@ class _NewMainScreenState extends State<NewMainScreen> {
               Get.offAll(() => WelcomeScreen());
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: AppColors.dangerFg,
               foregroundColor: Colors.white,
             ),
             child: const Text('Logout'),
@@ -489,40 +429,34 @@ class _NewMainScreenState extends State<NewMainScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         decoration: const BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(20.0),
-            topRight: Radius.circular(20.0),
+            topLeft: Radius.circular(AppRadius.lg),
+            topRight: Radius.circular(AppRadius.lg),
           ),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Handle
             Container(
-              margin: const EdgeInsets.only(top: 12.0),
+              margin: const EdgeInsets.only(top: AppSpacing.sm),
               width: 40.0,
               height: 4.0,
               decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2.0),
+                color: AppColors.surfaceBorder,
+                borderRadius: BorderRadius.circular(AppRadius.full),
               ),
             ),
-            
-            const SizedBox(height: 20.0),
-            
-            // Title
+            const SizedBox(height: AppSpacing.lg),
             const Text(
               'Help & Support',
               style: TextStyle(
-                fontSize: 20.0,
-                fontWeight: FontWeight.bold,
+                fontSize: 18.0,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
               ),
             ),
-            
-            const SizedBox(height: 20.0),
-            
-            // Support Options
+            const SizedBox(height: AppSpacing.md),
             _buildSupportOption(
               icon: Icons.phone,
               title: 'Call Us',
@@ -539,7 +473,6 @@ class _NewMainScreenState extends State<NewMainScreen> {
                 }
               },
             ),
-            
             _buildSupportOption(
               icon: Icons.message,
               title: 'WhatsApp',
@@ -559,7 +492,6 @@ class _NewMainScreenState extends State<NewMainScreen> {
                 }
               },
             ),
-            
             _buildSupportOption(
               icon: Icons.email,
               title: 'Email',
@@ -580,8 +512,7 @@ class _NewMainScreenState extends State<NewMainScreen> {
                 }
               },
             ),
-            
-            const SizedBox(height: 20.0),
+            const SizedBox(height: AppSpacing.lg),
           ],
         ),
       ),
@@ -596,14 +527,14 @@ class _NewMainScreenState extends State<NewMainScreen> {
   }) {
     return ListTile(
       leading: Container(
-        padding: const EdgeInsets.all(8.0),
+        padding: const EdgeInsets.all(AppSpacing.sm),
         decoration: BoxDecoration(
-          color: AppConstant.appMainColor.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8.0),
+          color: AppColors.brandTintBg,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
         ),
         child: Icon(
           icon,
-          color: AppConstant.appMainColor,
+          color: AppColors.brandTintFg,
           size: 20.0,
         ),
       ),
