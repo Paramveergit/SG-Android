@@ -16,6 +16,7 @@ import '../../models/cart-model.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_radius.dart';
+import '../../widgets/cart_icon_badge.dart';
 
 class ProductDetailsScreen extends StatefulWidget {
   ProductModel productModel;
@@ -288,60 +289,6 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
     });
   }
   
-  Widget _buildCartIconWithBadge() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: user != null 
-          ? FirebaseFirestore.instance
-              .collection('cart')
-              .doc(user!.uid)
-              .collection('cartOrders')
-              .snapshots()
-          : null,
-      builder: (context, snapshot) {
-        int cartItemCount = 0;
-        if (snapshot.hasData && snapshot.data != null) {
-          cartItemCount = snapshot.data!.docs.length;
-        }
-        
-        return Stack(
-          children: [
-            GestureDetector(
-              onTap: () => Get.to(() => cart_screen.CartScreen()),
-              child: const Padding(
-                padding: EdgeInsets.all(8.0),
-                child: Icon(Icons.shopping_cart),
-              ),
-            ),
-            if (cartItemCount > 0)
-              Positioned(
-                right: 4,
-                top: 4,
-                child: Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    color: AppColors.brand,
-                    borderRadius: BorderRadius.circular(AppRadius.full),
-                  ),
-                  constraints: const BoxConstraints(
-                    minWidth: 16,
-                    minHeight: 16,
-                  ),
-                  child: Text(
-                    cartItemCount.toString(),
-                    style: const TextStyle(
-                      color: AppColors.textOnBrand,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
-          ],
-        );
-      },
-    );
-  }
   
   Widget _buildQuantitySelector() {
     return AnimatedBuilder(
@@ -506,7 +453,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
       appBar: AppBar(
         title: const Text("Product Details"),
         actions: [
-          _buildCartIconWithBadge(),
+          const CartIconWithBadge(),
         ],
       ),
       body: SingleChildScrollView(
@@ -545,17 +492,28 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
                     },
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(10.0),
-                      child: CachedNetworkImage(
-                        imageUrl: imageUrl,
-                        fit: BoxFit.cover,
-                        width: Get.width - 20,
-                        placeholder: (context, url) => const ColoredBox(
-                          color: AppColors.surfaceMuted,
-                          child: Center(
-                            child: CupertinoActivityIndicator(),
+                      child: Container(
+                        // FIX: was BoxFit.cover inside a fixed 1.5
+                        // (landscape) aspectRatio box - every portrait
+                        // fashion photo (which is nearly all of them)
+                        // got its top/bottom cropped, cutting off heads.
+                        // BoxFit.contain guarantees the full image is
+                        // always visible regardless of its real aspect
+                        // ratio, with a neutral fill behind it instead
+                        // of jarring blank bars.
+                        color: AppColors.surfaceMuted,
+                        child: CachedNetworkImage(
+                          imageUrl: imageUrl,
+                          fit: BoxFit.contain,
+                          width: Get.width - 20,
+                          placeholder: (context, url) => const ColoredBox(
+                            color: AppColors.surfaceMuted,
+                            child: Center(
+                              child: CupertinoActivityIndicator(),
+                            ),
                           ),
+                          errorWidget: (context, url, error) => Icon(Icons.error),
                         ),
-                        errorWidget: (context, url, error) => Icon(Icons.error),
                       ),
                     ),
                   );
@@ -563,7 +521,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
                 options: CarouselOptions(
                   scrollDirection: Axis.horizontal,
                   autoPlay: true,
-                  aspectRatio: 1.5,
+                  aspectRatio: 0.8,
                   viewportFraction: 0.9,
                   enlargeCenterPage: true,
                 ),

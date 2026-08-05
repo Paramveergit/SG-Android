@@ -25,6 +25,18 @@ class AppProductListTile extends StatelessWidget {
     this.isAddingToCart = false,
   });
 
+  // FIX: some products have the literal 4-character string "null"
+  // stored as their categoryName in Firestore (same footgun found and
+  // fixed elsewhere tonight - an old ?.toString() call on an actually-
+  // null value), instead of a genuinely empty value. Showed up on
+  // every product card as "MOQ 2000 · null". Filters that out here so
+  // it never renders, same as the checkout pre-fill fix.
+  String _moqAndCategoryLabel(ProductModel product) {
+    final category = product.categoryName.trim();
+    final hasRealCategory = category.isNotEmpty && category.toLowerCase() != 'null';
+    return hasRealCategory ? 'MOQ ${product.moq} \u00b7 $category' : 'MOQ ${product.moq}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final hasImage = product.productImages.isNotEmpty;
@@ -110,7 +122,7 @@ class AppProductListTile extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'MOQ ${product.moq} \u00b7 ${product.categoryName}',
+                    _moqAndCategoryLabel(product),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),

@@ -25,6 +25,7 @@ import '../../theme/app_radius.dart';
 import '../../theme/app_spacing.dart';
 import '../../widgets/welcome-popup-widget.dart';
 import '../../widgets/product_feed_widget.dart';
+import '../../widgets/cart_icon_badge.dart';
 import '../../controllers/welcome-popup-controller.dart';
 import '../user-panel/cart-screen.dart' as cart_screen;
 import '../user-panel/profile-screen.dart';
@@ -147,10 +148,7 @@ class _NewMainScreenState extends State<NewMainScreen> {
         title: _buildHeaderWithLogo(),
         centerTitle: false,
         actions: [
-          IconButton(
-            onPressed: () => Get.to(() => cart_screen.CartScreen()),
-            icon: const Icon(Icons.shopping_cart_outlined),
-          ),
+          const CartIconWithBadge(),
         ],
       ),
       body: const SafeArea(
@@ -179,7 +177,10 @@ class _NewMainScreenState extends State<NewMainScreen> {
       },
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.storefront_outlined), label: 'Home'),
-        BottomNavigationBarItem(icon: Icon(Icons.shopping_cart_outlined), label: 'Cart'),
+        BottomNavigationBarItem(
+          icon: CartIconWithBadge(iconSize: 24, padding: EdgeInsets.zero, enableTap: false),
+          label: 'Cart',
+        ),
         BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
         BottomNavigationBarItem(icon: Icon(Icons.help_outline), label: 'Help'),
       ],
