@@ -125,15 +125,15 @@ class AppProductCard extends StatelessWidget {
               ),
             ),
             if (onAddToCart != null) ...[
-              const SizedBox(height: AppSpacing.sm),
+              const SizedBox(height: 6),
               SizedBox(
                 width: double.infinity,
-                height: 32,
+                height: 30,
                 child: ElevatedButton(
                   onPressed: isAddingToCart ? null : onAddToCart,
                   style: ElevatedButton.styleFrom(
                     padding: EdgeInsets.zero,
-                    minimumSize: const Size(0, 32),
+                    minimumSize: const Size(0, 30),
                   ),
                   child: isAddingToCart
                       ? const SizedBox(
