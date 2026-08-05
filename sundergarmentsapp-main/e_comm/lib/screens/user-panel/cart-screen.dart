@@ -158,246 +158,117 @@ class _CartScreenState extends State<CartScreen> {
             // extra Firestore read needed, computed once per rebuild
             // instead of once per cart item.
             double cartTotal = 0.0;
+            final cartModels = <CartModel>[];
             for (final doc in snapshot.data!.docs) {
               final total = doc['productTotalPrice'];
               if (total != null) {
                 cartTotal += double.tryParse(total.toString()) ?? 0.0;
               }
+              cartModels.add(CartModel(
+                productId: doc['productId'],
+                categoryId: doc['categoryId'],
+                productName: doc['productName'],
+                categoryName: doc['categoryName'],
+                salePrice: doc['salePrice'],
+                fullPrice: doc['fullPrice'],
+                productImages: doc['productImages'],
+                deliveryTime: doc['deliveryTime'],
+                isSale: doc['isSale'],
+                productDescription: doc['productDescription'],
+                createdAt: doc['createdAt'],
+                updatedAt: doc['updatedAt'],
+                productQuantity: doc['productQuantity'],
+                productTotalPrice:
+                    double.parse(doc['productTotalPrice'].toString()),
+              ));
             }
             productPriceController.totalPrice.value = cartTotal;
 
-            return Container(
-              child: ListView.builder(
-                itemCount: snapshot.data!.docs.length,
-                shrinkWrap: true,
-                physics: BouncingScrollPhysics(),
-                itemBuilder: (context, index) {
-                  final productData = snapshot.data!.docs[index];
-                  CartModel cartModel = CartModel(
-                    productId: productData['productId'],
-                    categoryId: productData['categoryId'],
-                    productName: productData['productName'],
-                    categoryName: productData['categoryName'],
-                    salePrice: productData['salePrice'],
-                    fullPrice: productData['fullPrice'],
-                    productImages: productData['productImages'],
-                    deliveryTime: productData['deliveryTime'],
-                    isSale: productData['isSale'],
-                    productDescription: productData['productDescription'],
-                    createdAt: productData['createdAt'],
-                    updatedAt: productData['updatedAt'],
-                    productQuantity: productData['productQuantity'],
-                    productTotalPrice: double.parse(
-                        productData['productTotalPrice'].toString()),
-                  );
-
-                  // FIX: this used to call productPriceController.
-                  // fetchProductPrice() here, once per cart item, on
-                  // every single rebuild - a cart with 10 items fired
-                  // 10 redundant Firestore reads every time a quantity
-                  // changed, all recomputing the exact same total this
-                  // StreamBuilder's own snapshot already has. Compute
-                  // it once, directly from the data already in hand,
-                  // right after the snapshot builds below - no extra
-                  // reads needed at all.
-                  return SwipeActionCell(
-                    key: ObjectKey(cartModel.productId),
-                    trailingActions: [
-                      SwipeAction(
-                        title: "Delete",
-                        forceAlignmentToBoundary: true,
-                        performsFirstActionWithFullSwipe: true,
-                        onTap: (CompletionHandler handler) async {
-                          print('deleted');
-
-                          await FirebaseFirestore.instance
-                              .collection('cart')
-                              .doc(user!.uid)
-                              .collection('cartOrders')
-                              .doc(cartModel.productId)
-                              .delete();
-                        },
-                      )
-                    ],
-                    child: Card(
-                      margin: const EdgeInsets.only(
-                        left: AppSpacing.md,
-                        right: AppSpacing.md,
-                        bottom: AppSpacing.sm,
-                      ),
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: AppColors.surfaceMuted,
-                          backgroundImage:
-                              NetworkImage(cartModel.productImages[0]),
-                        ),
-                        title: Text(cartModel.productName),
-                        subtitle: Row(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          children: [
-                            Text(
-                              '₹${cartModel.productTotalPrice.toStringAsFixed(2)}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textPrimary,
-                              ),
-                            ),
-                            SizedBox(
-                              width: Get.width / 20.0,
-                            ),
-                            // Delete button
-                            GestureDetector(
-                              onTap: () async {
-                                await FirebaseFirestore.instance
-                                    .collection('cart')
-                                    .doc(user!.uid)
-                                    .collection('cartOrders')
-                                    .doc(cartModel.productId)
-                                    .delete();
-                                
-                                Get.snackbar(
-                                  'Success',
-                                  'Item removed from cart',
-                                  backgroundColor: Colors.green,
-                                  colorText: Colors.white,
-                                  duration: const Duration(seconds: 2),
-                                );
-                              },
+            // Receipt-style layout: every line item sits inside one
+            // continuous bordered container with dashed dividers between
+            // rows, ending in Subtotal/Total - reads like an actual
+            // invoice instead of a stack of separate boxed cards.
+            return SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.all(AppSpacing.md),
               child: Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: AppColors.dangerBg,
-                                  borderRadius: BorderRadius.circular(AppRadius.sm),
-                                ),
-                                child: const Icon(
-                                  Icons.delete,
-                                  color: AppColors.dangerFg,
-                                  size: 16,
-                                ),
-                              ),
-                            ),
-                            SizedBox(
-                              width: Get.width / 20.0,
-                            ),
-                            Container(
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: AppColors.surfaceBorder,
-                                  width: 1.0,
-                                ),
-                                borderRadius: BorderRadius.circular(AppRadius.sm),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  // Minus button
-                                  GestureDetector(
-                                    onTap: () async {
-                                      if (cartModel.productQuantity > 1) {
-                                        await FirebaseFirestore.instance
-                                            .collection('cart')
-                                            .doc(user!.uid)
-                                            .collection('cartOrders')
-                                            .doc(cartModel.productId)
-                                            .update({
-                                          'productQuantity':
-                                              cartModel.productQuantity - 1,
-                                          'productTotalPrice':
-                                              (double.parse(cartModel.isSale ? cartModel.salePrice : cartModel.fullPrice) *
-                                                  (cartModel.productQuantity - 1))
-                                        });
-                                      }
-                                    },
-                                    child: Container(
-                                      width: 32,
-                                      height: 32,
-                                      decoration: BoxDecoration(
-                                        color: cartModel.productQuantity > 1 
-                                            ? AppColors.textPrimary 
-                                            : AppColors.surfaceMuted,
-                                        borderRadius: const BorderRadius.only(
-                                          topLeft: Radius.circular(3),
-                                          bottomLeft: Radius.circular(3),
-                                        ),
-                                      ),
-                                      child: Icon(
-                                        Icons.remove,
-                                        color: cartModel.productQuantity > 1 
-                                            ? AppColors.textOnBrand 
-                                            : AppColors.textSecondary,
-                                        size: 16,
-                                      ),
-                                    ),
-                                  ),
-                                  // Quantity display/input
-                                  GestureDetector(
-                                    onTap: () {
-                                      _showQuantityEditDialog(cartModel);
-                                    },
-                                    child: Container(
-                                      width: 50,
-                                      height: 32,
-                                      decoration: const BoxDecoration(
-                                        color: AppColors.surface,
-                                        border: Border.symmetric(
-                                          vertical: BorderSide(color: AppColors.surfaceBorder, width: 1.0),
-                                        ),
-                                      ),
-                                      child: Center(
-                                        child: Text(
-                                          cartModel.productQuantity.toString(),
-                                          style: const TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                            color: AppColors.brand,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  // Plus button
-                                  GestureDetector(
-                                    onTap: () async {
-                                      // Allow unlimited quantity increases for mass orders
-                                      await FirebaseFirestore.instance
-                                          .collection('cart')
-                                          .doc(user!.uid)
-                                          .collection('cartOrders')
-                                          .doc(cartModel.productId)
-                                          .update({
-                                        'productQuantity':
-                                            cartModel.productQuantity + 1,
-                                        'productTotalPrice':
-                                            (double.parse(cartModel.isSale ? cartModel.salePrice : cartModel.fullPrice) *
-                                                (cartModel.productQuantity + 1))
-                                      });
-                                    },
-                                    child: Container(
-                                      width: 32,
-                                      height: 32,
-                                      decoration: BoxDecoration(
-                                        color: AppColors.brand,
-                                        borderRadius: const BorderRadius.only(
-                                          topRight: Radius.circular(3),
-                                          bottomRight: Radius.circular(3),
-                                        ),
-                                      ),
-                                      child: const Icon(
-                                        Icons.add,
-                                        color: AppColors.textOnBrand,
-                                        size: 16,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  border: Border.all(color: AppColors.surfaceBorder),
+                ),
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Order summary',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textSecondary,
+                        letterSpacing: 0.5,
                       ),
                     ),
-                  );
-                },
+                    const SizedBox(height: AppSpacing.md),
+                    for (int i = 0; i < cartModels.length; i++) ...[
+                      SwipeActionCell(
+                        key: ObjectKey(cartModels[i].productId),
+                        trailingActions: [
+                          SwipeAction(
+                            title: "Delete",
+                            forceAlignmentToBoundary: true,
+                            performsFirstActionWithFullSwipe: true,
+                            onTap: (CompletionHandler handler) async {
+                              await FirebaseFirestore.instance
+                                  .collection('cart')
+                                  .doc(user!.uid)
+                                  .collection('cartOrders')
+                                  .doc(cartModels[i].productId)
+                                  .delete();
+                            },
+                          )
+                        ],
+                        child: _buildReceiptLine(cartModels[i]),
+                      ),
+                      if (i < cartModels.length - 1) ...[
+                        const SizedBox(height: AppSpacing.sm),
+                        const _DashedDivider(),
+                        const SizedBox(height: AppSpacing.sm),
+                      ],
+                    ],
+                    const SizedBox(height: AppSpacing.md),
+                    const _DashedDivider(),
+                    const SizedBox(height: AppSpacing.md),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Subtotal',
+                          style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+                        ),
+                        Text(
+                          '\u20b9${cartTotal.toStringAsFixed(2)}',
+                          style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Total',
+                          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                        ),
+                        Text(
+                          '\u20b9${cartTotal.toStringAsFixed(2)}',
+                          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             );
           }
@@ -454,6 +325,117 @@ class _CartScreenState extends State<CartScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildReceiptLine(CartModel cartModel) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          child: Image.network(
+            cartModel.productImages[0],
+            width: 48,
+            height: 48,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => Container(
+              width: 48,
+              height: 48,
+              color: AppColors.surfaceMuted,
+              child: const Icon(Icons.checkroom_outlined, color: AppColors.textSecondary, size: 20),
+            ),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                cartModel.productName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  // Compact qty stepper - tap the number to type a
+                  // specific quantity directly for bulk orders.
+                  _buildCompactQtyButton(
+                    icon: Icons.remove,
+                    enabled: cartModel.productQuantity > 1,
+                    onTap: () => _updateQuantity(cartModel, cartModel.productQuantity - 1),
+                  ),
+                  GestureDetector(
+                    onTap: () => _showQuantityEditDialog(cartModel),
+                    child: Container(
+                      width: 36,
+                      alignment: Alignment.center,
+                      child: Text(
+                        '${cartModel.productQuantity}',
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                      ),
+                    ),
+                  ),
+                  _buildCompactQtyButton(
+                    icon: Icons.add,
+                    enabled: true,
+                    onTap: () => _updateQuantity(cartModel, cartModel.productQuantity + 1),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '\u20b9${cartModel.productTotalPrice.toStringAsFixed(2)}',
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCompactQtyButton({
+    required IconData icon,
+    required bool enabled,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: enabled ? onTap : null,
+      child: Container(
+        width: 24,
+        height: 24,
+        decoration: BoxDecoration(
+          color: enabled ? AppColors.surfaceMuted : AppColors.surfaceMuted.withOpacity(0.5),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Icon(
+          icon,
+          size: 14,
+          color: enabled ? AppColors.textPrimary : AppColors.textSecondary,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _updateQuantity(CartModel cartModel, int newQuantity) async {
+    if (newQuantity < 1) return;
+    final unitPrice = double.parse(cartModel.isSale ? cartModel.salePrice : cartModel.fullPrice);
+    await FirebaseFirestore.instance
+        .collection('cart')
+        .doc(user!.uid)
+        .collection('cartOrders')
+        .doc(cartModel.productId)
+        .update({
+      'productQuantity': newQuantity,
+      'productTotalPrice': unitPrice * newQuantity,
+    });
   }
 
   void _showQuantityEditDialog(CartModel cartModel) {
@@ -714,6 +696,37 @@ class _CartScreenState extends State<CartScreen> {
       isDismissible: true,
       enableDrag: true,
       elevation: 6,
+    );
+  }
+}
+
+/// A dashed horizontal line - the classic receipt/invoice divider
+/// between line items and the totals section. No shimmer/shadow,
+/// just a thin perforated-looking rule like a printed receipt.
+class _DashedDivider extends StatelessWidget {
+  const _DashedDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const dashWidth = 5.0;
+        const dashSpace = 4.0;
+        final dashCount = (constraints.maxWidth / (dashWidth + dashSpace)).floor();
+        return Row(
+          children: List.generate(
+            dashCount,
+            (_) => Padding(
+              padding: const EdgeInsets.only(right: dashSpace),
+              child: Container(
+                width: dashWidth,
+                height: 1,
+                color: AppColors.surfaceBorder,
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
