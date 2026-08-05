@@ -31,9 +31,6 @@ class _ProductFeedWidgetState extends State<ProductFeedWidget> {
   // Loading state management to prevent multiple taps
   final Set<String> _addingToCartProducts = <String>{};
   
-  // Scroll position preservation for filter section
-  final ScrollController _filterScrollController = ScrollController();
-  double _savedFilterScrollOffset = 0.0;
   
   // Stable category order to prevent position shifting
   static const List<String> _stableCategoryOrder = [
@@ -68,7 +65,6 @@ class _ProductFeedWidgetState extends State<ProductFeedWidget> {
   @override
   void dispose() {
     _searchController.dispose();
-    _filterScrollController.dispose();
     super.dispose();
   }
 
@@ -160,21 +156,17 @@ class _ProductFeedWidgetState extends State<ProductFeedWidget> {
           return const SizedBox(height: 40.0);
         }
 
-        return CategoryFilterList(
-          key: const ValueKey('category_filter_list'),
+        return CategoryGridSelector(
+          key: const ValueKey('category_grid_selector'),
           categories: snapshot.data!.docs,
           selectedCategoryId: selectedCategoryId,
           onCategorySelected: (categoryId) {
-            // Save current scroll position before state change
-            _savedFilterScrollOffset = _filterScrollController.offset;
             setState(() {
               selectedCategoryId = categoryId;
             });
           },
           categoryNameMapping: categoryNameMapping,
           stableCategoryOrder: _stableCategoryOrder,
-          scrollController: _filterScrollController,
-          savedScrollOffset: _savedFilterScrollOffset,
         );
       },
     );
@@ -598,150 +590,164 @@ class _ProductFeedWidgetState extends State<ProductFeedWidget> {
   }
 }
 
-class CategoryFilterList extends StatefulWidget {
+/// Category picker (Option C, per direct feedback): a full 2-column
+/// grid of category cards while nothing is selected, collapsing to a
+/// small "< Category name" strip once one is picked - so the grid
+/// doesn't permanently eat scroll space above the product list, only
+/// while the person is actually choosing.
+///
+/// Each card shows the category's real photo (categoryImg) once one
+/// exists in Firestore - the data model already had this field, it
+/// was just never populated or used. Until real photos are uploaded
+/// via the admin app, falls back to a brand-tinted icon tile so it
+/// never looks broken - the switch to real photos needs no further
+/// code changes once they exist.
+class CategoryGridSelector extends StatelessWidget {
   final List<QueryDocumentSnapshot> categories;
   final String? selectedCategoryId;
   final ValueChanged<String?> onCategorySelected;
   final Map<String, String> categoryNameMapping;
   final List<String> stableCategoryOrder;
-  final ScrollController scrollController;
-  final double savedScrollOffset;
 
-  const CategoryFilterList({
-    Key? key,
+  const CategoryGridSelector({
+    super.key,
     required this.categories,
     required this.selectedCategoryId,
     required this.onCategorySelected,
     required this.categoryNameMapping,
     required this.stableCategoryOrder,
-    required this.scrollController,
-    required this.savedScrollOffset,
-  }) : super(key: key);
+  });
 
-  @override
-  State<CategoryFilterList> createState() => _CategoryFilterListState();
-}
-
-class _CategoryFilterListState extends State<CategoryFilterList> {
-  @override
-  void initState() {
-    super.initState();
-    // Restore saved scroll position after the widget is built
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (widget.savedScrollOffset > 0 && widget.scrollController.hasClients) {
-        widget.scrollController.jumpTo(widget.savedScrollOffset);
-      }
-    });
+  IconData _fallbackIcon(String nameLower) {
+    if (nameLower.contains('infant') || nameLower.contains('baby')) {
+      return Icons.child_friendly;
+    }
+    if (nameLower.contains('boy') || nameLower.contains('men')) {
+      return Icons.man;
+    }
+    if (nameLower.contains('girl') || nameLower.contains('women')) {
+      return Icons.woman;
+    }
+    return Icons.checkroom;
   }
 
   @override
   Widget build(BuildContext context) {
-    // Sort categories by stable order
-    final sortedCategories = widget.categories.toList()
+    if (selectedCategoryId != null) {
+      String selectedName = selectedCategoryId!;
+      for (final doc in categories) {
+        final data = doc.data() as Map<String, dynamic>;
+        if (data['categoryId'] == selectedCategoryId) {
+          final rawName = data['categoryName'] as String? ?? selectedCategoryId!;
+          selectedName = categoryNameMapping[selectedCategoryId] ?? rawName;
+          break;
+        }
+      }
+      return GestureDetector(
+        onTap: () => onCategorySelected(null),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(color: AppColors.surfaceBorder),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.arrow_back, size: 16, color: AppColors.brand),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                selectedName,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.brand,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final sortedCategories = categories.toList()
       ..sort((a, b) {
         final aId = (a.data() as Map<String, dynamic>)['categoryId'] as String;
         final bId = (b.data() as Map<String, dynamic>)['categoryId'] as String;
-        
-        final aIndex = widget.stableCategoryOrder.indexOf(aId);
-        final bIndex = widget.stableCategoryOrder.indexOf(bId);
-        
-        // If both are in stable order, sort by their position
-        if (aIndex != -1 && bIndex != -1) {
-          return aIndex.compareTo(bIndex);
-        }
-        // If only one is in stable order, prioritize it
+        final aIndex = stableCategoryOrder.indexOf(aId);
+        final bIndex = stableCategoryOrder.indexOf(bId);
+        if (aIndex != -1 && bIndex != -1) return aIndex.compareTo(bIndex);
         if (aIndex != -1) return -1;
         if (bIndex != -1) return 1;
-        // If neither is in stable order, sort by category name for consistency
         final aName = (a.data() as Map<String, dynamic>)['categoryName'] as String;
         final bName = (b.data() as Map<String, dynamic>)['categoryName'] as String;
         return aName.compareTo(bName);
       });
 
-    // Build category chips list
-    final categoryChips = <Widget>[
-      // "All Products" chip
-      Padding(
-        key: const ValueKey('all_products_chip'),
-        padding: const EdgeInsets.symmetric(horizontal: 8.0),
-        child: FilterChip(
-          label: const Text('All Products'),
-          selected: widget.selectedCategoryId == null,
-          onSelected: (selected) {
-            if (selected) {
-              widget.onCategorySelected(null);
-            }
-          },
-          selectedColor: AppColors.brand.withOpacity(0.2),
-          checkmarkColor: AppColors.brand,
-          labelStyle: TextStyle(
-            color: widget.selectedCategoryId == null 
-              ? AppColors.brand 
-              : AppColors.textSecondary,
-            fontWeight: widget.selectedCategoryId == null 
-              ? FontWeight.bold 
-              : FontWeight.normal,
-          ),
-        ),
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 1.7,
+        crossAxisSpacing: AppSpacing.sm,
+        mainAxisSpacing: AppSpacing.sm,
       ),
-      
-      // Category chips
-      ...sortedCategories.map((doc) {
-        final categoryData = doc.data() as Map<String, dynamic>;
-        final categoryId = categoryData['categoryId'] as String;
-        String categoryName = categoryData['categoryName'] as String;
-        
-        // Apply category name mapping
-        categoryName = widget.categoryNameMapping[categoryId] ?? categoryName;
-        
-        final isSelected = widget.selectedCategoryId == categoryId;
+      itemCount: sortedCategories.length,
+      itemBuilder: (context, index) {
+        final data = sortedCategories[index].data() as Map<String, dynamic>;
+        final categoryId = data['categoryId'] as String;
+        String categoryName = data['categoryName'] as String? ?? '';
+        categoryName = categoryNameMapping[categoryId] ?? categoryName;
+        final categoryImg = (data['categoryImg'] as String?)?.trim() ?? '';
+        final hasRealImage = categoryImg.isNotEmpty && categoryImg.toLowerCase() != 'null';
 
-        print('Category: $categoryName (ID: $categoryId, Selected: $isSelected)');
-
-        return Padding(
-          key: ValueKey('category_$categoryId'),
-          padding: const EdgeInsets.symmetric(horizontal: 4.0),
-          child: FilterChip(
-            label: Text(
-              categoryName,
-              style: TextStyle(
-                color: isSelected 
-                  ? AppColors.brand 
-                  : AppColors.textSecondary,
-                fontWeight: isSelected 
-                  ? FontWeight.bold 
-                  : FontWeight.normal,
-              ),
-            ),
-            selected: isSelected,
-            onSelected: (selected) {
-              print('Category selected: $categoryName (ID: $categoryId, Selected: $selected)');
-              widget.onCategorySelected(selected ? categoryId : null);
-            },
-            selectedColor: AppColors.brand.withOpacity(0.2),
-            checkmarkColor: AppColors.brand,
-            backgroundColor: AppColors.surfaceMuted,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-              side: BorderSide(
-                color: isSelected 
-                  ? AppColors.brand 
-                  : Colors.transparent,
-              ),
+        return GestureDetector(
+          onTap: () => onCategorySelected(categoryId),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (hasRealImage)
+                  Image.network(
+                    categoryImg,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(color: AppColors.brandTintBg),
+                  )
+                else
+                  Container(color: AppColors.brandTintBg),
+                if (hasRealImage)
+                  Container(color: Colors.black.withOpacity(0.28)),
+                if (!hasRealImage)
+                  Align(
+                    alignment: Alignment.center,
+                    child: Icon(
+                      _fallbackIcon(categoryName.toLowerCase()),
+                      color: AppColors.brand,
+                      size: 26,
+                    ),
+                  ),
+                Positioned(
+                  left: 10,
+                  bottom: hasRealImage ? 8 : 6,
+                  right: 10,
+                  child: Text(
+                    categoryName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: hasRealImage ? Colors.white : AppColors.textPrimary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         );
-      }).toList(),
-    ];
-
-    return SizedBox(
-      height: 40.0,
-      child: ListView(
-        key: const ValueKey('category_filters'),
-        controller: widget.scrollController,
-        scrollDirection: Axis.horizontal,
-        children: categoryChips,
-      ),
+      },
     );
   }
 }
