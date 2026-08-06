@@ -66,37 +66,6 @@ class _SkeletonBoxState extends State<SkeletonBox>
   }
 }
 
-/// Pre-built skeleton matching the product card layout, for use in
-/// product grids while data loads.
-class ProductCardSkeleton extends StatelessWidget {
-  const ProductCardSkeleton({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: AppColors.surfaceBorder),
-      ),
-      padding: const EdgeInsets.all(10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const AspectRatio(
-            aspectRatio: 1,
-            child: SkeletonBox(borderRadius: AppRadius.sm),
-          ),
-          const SizedBox(height: 10),
-          const SkeletonBox(height: 14, width: 120),
-          const SizedBox(height: 6),
-          const SkeletonBox(height: 12, width: 70),
-        ],
-      ),
-    );
-  }
-}
-
 /// Loading placeholder matching AppProductListTile's row shape - used
 /// wherever products are shown as a list rather than a grid.
 class ProductListTileSkeleton extends StatelessWidget {
