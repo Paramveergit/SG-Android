@@ -9,7 +9,6 @@ import '../user-panel/new-main-screen.dart';
 import '../../controllers/get-user-data-controller.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
-import '../../utils/auth_diagnostics.dart';
 import '../../widgets/app_error_state.dart';
 
 /// Centralized post-auth router.
@@ -49,39 +48,42 @@ class _HomeRouterState extends State<HomeRouter> {
     // pattern would produce. Debug logging added below so if this
     // still isn't enough on some device, we have real data instead of
     // guessing again.
+    // Confirmed root cause of the earlier "logged out every time" reports
+    // was test-methodology, not a bug here: uninstalling/reinstalling the
+    // APK between test builds wipes local app storage, including
+    // Firebase Auth's persisted session - currentUser is correctly null
+    // on a genuine fresh install. Kept this check as the synchronous-
+    // first, stream-fallback pattern below regardless, since it's a
+    // real, valid improvement over a bare authStateChanges().first
+    // wait even though it wasn't the actual cause of what was reported.
     User? user = FirebaseAuth.instance.currentUser;
-    AuthDiagnostics.log('currentUser snapshot = ${user?.uid ?? "null"}');
+    debugPrint('HomeRouter: currentUser snapshot = ${user?.uid ?? "null"}');
 
     if (user == null) {
       // Give restoration a genuine chance to finish rather than
       // trusting the very first stream event: take up to the first 3
-      // emissions (or 2.5s, whichever comes first), and use the LAST
-      // non-null one seen in that window. A session that's actually
-      // there tends to show up within the first event or two once
-      // restoration completes; this only costs real time when there
-      // truly is no session, which is the correct case to end up at
-      // Sign-In anyway.
+      // emissions (or 2.5s, whichever comes first), and use the first
+      // non-null one seen in that window.
       User? resolved;
       try {
         await for (final event in FirebaseAuth.instance
             .authStateChanges()
             .take(3)
             .timeout(const Duration(milliseconds: 2500), onTimeout: (sink) => sink.close())) {
-          AuthDiagnostics.log('authStateChanges event = ${event?.uid ?? "null"}');
+          debugPrint('HomeRouter: authStateChanges event = ${event?.uid ?? "null"}');
           if (event != null) {
             resolved = event;
             break;
           }
         }
       } catch (e) {
-        AuthDiagnostics.log('authStateChanges wait error: $e');
+        debugPrint('HomeRouter: authStateChanges wait error: $e');
       }
       user = resolved;
     }
 
     if (user == null) {
-      AuthDiagnostics.log('no session found after full check - routing to Sign-In');
-      return _RouteResult.widget(const SignInScreen(showAuthDiagnostics: true));
+      return _RouteResult.widget(const SignInScreen());
     }
 
     try {
