@@ -1,5 +1,6 @@
 // ignore_for_file: file_names
 import 'package:e_comm/models/order-model.dart';
+import 'package:e_comm/models/order-status.dart';
 import 'package:e_comm/repositories/order-repository.dart';
 import 'package:e_comm/screens/user-panel/order-detail-screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -65,10 +66,48 @@ class _AllOrdersScreenState extends State<AllOrdersScreen> {
 
                 return ListView.builder(
                   padding: const EdgeInsets.all(AppSpacing.md),
-                  itemCount: orders.length,
+                  itemCount: orders.length + 1,
                   physics: const BouncingScrollPhysics(),
                   itemBuilder: (context, index) {
-                    final order = orders[index];
+                    if (index == 0) {
+                      // Cancelled orders count toward "orders placed"
+                      // (they genuinely were), but not toward the
+                      // amount spent - that should reflect real
+                      // business done, not orders that didn't
+                      // actually go through. Matches how most
+                      // lifetime-spend stats work.
+                      final totalSpent = orders
+                          .where((o) => o.status != OrderStatus.cancelled)
+                          .fold(0.0, (sum, o) => sum + o.total);
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.surfaceBorder),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: _OrderStatColumn(
+                                label: 'Total orders',
+                                value: '${orders.length}',
+                              ),
+                            ),
+                            Container(width: 1, height: 36, color: AppColors.surfaceBorder),
+                            Expanded(
+                              child: _OrderStatColumn(
+                                label: 'Total spent',
+                                value: '\u20b9${totalSpent.toStringAsFixed(0)}',
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    final order = orders[index - 1];
                     final firstItem =
                         order.items.isNotEmpty ? order.items.first : null;
                     final itemSummary = firstItem == null
@@ -116,6 +155,35 @@ class _AllOrdersScreenState extends State<AllOrdersScreen> {
                 );
               },
             ),
+    );
+  }
+}
+
+class _OrderStatColumn extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _OrderStatColumn({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+        ),
+      ],
     );
   }
 }
