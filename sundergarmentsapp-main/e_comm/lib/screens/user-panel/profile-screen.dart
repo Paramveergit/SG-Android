@@ -7,6 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../../models/order-model.dart';
+import '../../models/order-status.dart';
 import '../../repositories/order-repository.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
@@ -120,8 +121,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           
           const SizedBox(height: 16.0),
-          
-          // Order Count Only
+
+          // Stats grid
           StreamBuilder<List<OrderModel>>(
             stream: user != null
               ? orderRepository.streamOrdersForCustomer(user!.uid)
@@ -132,7 +133,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               // this account's orders query silently displayed as "0"
               // - indistinguishable from actually having zero orders.
               if (snapshot.hasError) {
-                debugPrint('Order count stream error: ${snapshot.error}');
+                debugPrint('Order stats stream error: ${snapshot.error}');
                 return _buildStatItem(
                   icon: Icons.error_outline,
                   label: 'Orders',
@@ -140,21 +141,92 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 );
               }
 
-              int orderCount = 0;
-              
-              if (snapshot.hasData && snapshot.data != null) {
-                orderCount = snapshot.data!.length;
-              }
-              
-              return _buildStatItem(
-                icon: Icons.shopping_bag_outlined,
-                label: 'Orders',
-                value: orderCount.toString(),
+              final orders = (snapshot.hasData && snapshot.data != null)
+                  ? snapshot.data!
+                  : <OrderModel>[];
+
+              final nonCancelled =
+                  orders.where((o) => o.status != OrderStatus.cancelled).toList();
+              final avgOrderValue = nonCancelled.isEmpty
+                  ? 0.0
+                  : nonCancelled.fold(0.0, (sum, o) => sum + o.total) / nonCancelled.length;
+
+              // Orders come back newest-first from the repository, so
+              // the first entry is the most recent order regardless
+              // of how many there are.
+              final lastOrder = orders.isNotEmpty ? orders.first : null;
+
+              final memberSince = user?.metadata.creationTime;
+
+              return Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildStatItem(
+                        icon: Icons.shopping_bag_outlined,
+                        label: 'Orders',
+                        value: orders.length.toString(),
+                      ),
+                      _buildStatItem(
+                        icon: Icons.payments_outlined,
+                        label: 'Avg. order value',
+                        value: nonCancelled.isEmpty
+                            ? '\u2014'
+                            : '\u20b9${avgOrderValue.toStringAsFixed(0)}',
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16.0),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildStatItem(
+                        icon: Icons.calendar_today_outlined,
+                        label: 'Member since',
+                        value: memberSince != null
+                            ? _formatMonthYear(memberSince)
+                            : '\u2014',
+                      ),
+                      _buildLastOrderStatItem(lastOrder),
+                    ],
+                  ),
+                ],
               );
             },
           ),
         ],
       ),
+    );
+  }
+
+  String _formatMonthYear(DateTime date) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    return '${months[date.month - 1]} ${date.year}';
+  }
+
+  Widget _buildLastOrderStatItem(OrderModel? lastOrder) {
+    if (lastOrder == null) {
+      return _buildStatItem(
+        icon: Icons.history,
+        label: 'Last order',
+        value: '\u2014',
+      );
+    }
+    return Column(
+      children: [
+        const Icon(Icons.history, color: AppColors.brand, size: 24.0),
+        const SizedBox(height: 8.0),
+        StatusBadge(status: lastOrder.status),
+        const SizedBox(height: 4.0),
+        const Text(
+          'Last order',
+          style: TextStyle(fontSize: 14.0, color: AppColors.textSecondary),
+        ),
+      ],
     );
   }
 
