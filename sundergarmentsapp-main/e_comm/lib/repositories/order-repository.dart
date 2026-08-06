@@ -35,7 +35,7 @@ class OrderRepository {
   /// Creates one order document from a full cart checkout - every item
   /// from the cart goes into a single order's `items` array instead of
   /// becoming its own disconnected document.
-  Future<String> createOrder({
+  Future<OrderModel> createOrder({
     required String customerId,
     required String customerName,
     required String customerPhone,
@@ -70,7 +70,12 @@ class OrderRepository {
     );
 
     await orderRef.set(order.toMap());
-    return orderRef.id;
+    // FIX: this used to return just orderRef.id, discarding the full
+    // order object (orderNumber, items, total) that was already built
+    // right above - any caller that needed those details (like a
+    // post-checkout WhatsApp summary) had no way to get them without
+    // a second read. Returning the object we already have in memory.
+    return order;
   }
 
   /// The one and only status change a customer is allowed to make

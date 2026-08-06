@@ -2,6 +2,7 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:e_comm/models/order-item-model.dart';
+import 'package:e_comm/models/order-model.dart';
 import 'package:e_comm/repositories/order-repository.dart';
 import 'package:e_comm/screens/auth-ui/home-router.dart';
 import 'package:e_comm/utils/app-constant.dart';
@@ -9,6 +10,56 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:get/get.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+/// Redirects to WhatsApp with a pre-filled order-summary message
+/// addressed to the business's own number - the customer just taps
+/// Send, and the full order (number, every item, quantities, total,
+/// delivery address) lands straight in the business's WhatsApp. Per
+/// direct decision: not a silent, fully-automated send (that needs
+/// the real WhatsApp Business API - Meta verification, pre-approved
+/// templates, real setup time), this trades a one-tap customer action
+/// for something that works today with no new accounts.
+Future<void> _redirectToWhatsAppOrderSummary(OrderModel order) async {
+  const businessNumber = '917850078100';
+
+  final buffer = StringBuffer();
+  buffer.writeln('New order placed!');
+  buffer.writeln();
+  buffer.writeln('Order: ${order.orderNumber}');
+  buffer.writeln();
+  buffer.writeln('Customer: ${order.customerName}');
+  buffer.writeln('Phone: ${order.customerPhone}');
+  buffer.writeln('Delivery address: ${order.customerAddress}');
+  buffer.writeln();
+  buffer.writeln('Items:');
+  for (final item in order.items) {
+    final variant = [item.size, item.color]
+        .where((v) => v != null && v.isNotEmpty)
+        .join(' / ');
+    buffer.writeln(
+      '\u2022 ${item.productName}${variant.isNotEmpty ? ' ($variant)' : ''} '
+      '\u00d7 ${item.quantity} - \u20b9${item.lineTotal.toStringAsFixed(2)}',
+    );
+  }
+  buffer.writeln();
+  buffer.writeln('Total: \u20b9${order.total.toStringAsFixed(2)}');
+
+  final uri = Uri.parse(
+    'https://wa.me/$businessNumber?text=${Uri.encodeComponent(buffer.toString())}',
+  );
+
+  try {
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  } catch (e) {
+    print('WhatsApp order-summary redirect failed: $e');
+    // A customer without WhatsApp installed (or who dismisses it)
+    // shouldn't lose their already-successful order over this - the
+    // order is already saved by the time this runs, this is a
+    // secondary notification channel, not the order confirmation
+    // itself.
+  }
+}
 
 void placeOrder({
   required BuildContext context,
@@ -92,7 +143,7 @@ void placeOrder({
     // document, and the customer's top-level order record got
     // overwritten on every single checkout.
     final orderRepository = OrderRepository();
-    await orderRepository.createOrder(
+    final createdOrder = await orderRepository.createOrder(
       customerId: user.uid,
       customerName: customerName,
       customerPhone: customerPhone,
@@ -119,14 +170,12 @@ void placeOrder({
       }
     }
 
-    // FIX (removed, not disabled): this used to force-open WhatsApp
-    // on the CUSTOMER's own phone after every order, pre-filled with
-    // an order-confirmation message addressed to the seller's number -
-    // disruptive UX (yanks the customer out of the app right after
-    // checkout, requires WhatsApp installed) and not what "order
-    // confirmation" should mean from the customer's side. Staff order
-    // notifications are handled separately via Cloud Functions/FCM,
-    // not by routing through the customer's own WhatsApp.
+    // Redirect to WhatsApp with the full order summary pre-filled,
+    // addressed to the business's own number - customer just taps
+    // Send. Runs before the success snackbar/navigation so the
+    // customer sees WhatsApp open right after their order is
+    // confirmed, not after being routed back to Home first.
+    await _redirectToWhatsAppOrderSummary(createdOrder);
 
     print("Order Confirmed Successfully");
     Get.snackbar(
