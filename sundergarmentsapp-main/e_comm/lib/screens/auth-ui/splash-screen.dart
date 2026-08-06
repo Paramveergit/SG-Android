@@ -2,15 +2,11 @@
 
 import 'dart:async';
 
-import 'package:e_comm/controllers/get-user-data-controller.dart';
-import 'package:e_comm/screens/admin-panel/admin-main-screen.dart';
-import 'package:e_comm/screens/auth-ui/sign-in-screen.dart';
-import 'package:e_comm/screens/user-panel/new-main-screen.dart';
+import 'package:e_comm/screens/auth-ui/home-router.dart';
 import 'package:e_comm/utils/app-constant.dart';
 import 'package:e_comm/theme/app_colors.dart';
 import 'package:e_comm/widgets/animated-logo-widget.dart';
 import 'package:e_comm/widgets/animated-text-widget.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -149,44 +145,20 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _navigateToNextScreen() async {
-    final GetUserDataController getUserDataController =
-        Get.put(GetUserDataController());
-
-    try {
-      // Wait for Firebase's actual, settled auth state - not a
-      // snapshot taken before restoration finished.
-      final User? user = await FirebaseAuth.instance.authStateChanges().first;
-
-      if (user != null) {
-        // Fetch user data from Firestore
-        var userData = await getUserDataController.getUserData(user.uid);
-
-        // Check if userData is not empty before accessing elements
-        if (userData.isNotEmpty) {
-          if (userData[0]['isAdmin'] == true) {
-            Get.offAll(() => AdminMainScreen());
-          } else {
-            Get.offAll(() => NewMainScreen());
-          }
-        } else {
-          // User exists in Firebase Auth but no data in Firestore, go to Sign-In
-          Get.offAll(() => SignInScreen());
-        }
-      } else {
-        // No user logged in, go to Sign-In
-        Get.offAll(() => SignInScreen());
-      }
-    } catch (e) {
-      // Don't leave the user stuck on the splash screen forever if
-      // anything above fails (network issue, permissions, etc.) - fall
-      // back to sign-in so they can at least retry.
-      Get.snackbar(
-        "Something went wrong",
-        "Please try signing in again. ($e)",
-        snackPosition: SnackPosition.BOTTOM,
-      );
-      Get.offAll(() => SignInScreen());
-    }
+    // FIX: this used to duplicate HomeRouter's auth-check logic here,
+    // except worse - any exception from the Firestore profile lookup
+    // (a slow connection on cold app start being the most common
+    // cause) fell through to a catch block that bounced straight to
+    // SignInScreen, even though the person's actual Firebase Auth
+    // session was still completely valid. It never signed them out -
+    // it just looked and felt exactly like it had, which is precisely
+    // what was reported: "have to log in every single time I reopen
+    // the app." HomeRouter already solves this correctly elsewhere in
+    // the app (proper auth-state-changes wait, self-healing profile
+    // creation, a real retry UI instead of silently bouncing to
+    // sign-in) - splash screen should just hand off to it instead of
+    // maintaining its own separate, worse copy of the same logic.
+    Get.offAll(() => const HomeRouter());
   }
 
   @override
