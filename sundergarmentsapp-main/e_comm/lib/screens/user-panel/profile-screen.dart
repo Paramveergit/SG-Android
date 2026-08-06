@@ -14,6 +14,7 @@ import '../../theme/app_radius.dart';
 import '../../widgets/status_badge.dart';
 import '../../widgets/app_empty_state.dart';
 import '../../widgets/app_error_state.dart';
+import '../../widgets/support_sheet.dart';
 import 'order-detail-screen.dart';
 import 'all-orders-screen.dart';
 import '../auth-ui/welcome-screen.dart';
@@ -397,6 +398,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           
           const SizedBox(height: 16.0),
+          
+          // Help & Support
+          _buildActionButton(
+            icon: Icons.help_outline,
+            title: 'Help & Support',
+            subtitle: 'Call, WhatsApp, or email us',
+            onTap: () => showSupportOptionsSheet(context),
+          ),
+          
+          const SizedBox(height: 12.0),
           
           // Sign Out Button
           _buildActionButton(
