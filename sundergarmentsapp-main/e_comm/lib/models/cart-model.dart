@@ -15,6 +15,12 @@ class CartModel {
   final dynamic updatedAt;
   final int productQuantity;
   final double productTotalPrice;
+  // MOQ carried onto the cart line item itself (not just looked up from
+  // the product) so the cart's own +/- stepper knows the right lot
+  // size without an extra product fetch. Defaults to 1 for older cart
+  // documents written before this field existed - falls back to
+  // per-piece stepping for those, never breaks on missing data.
+  final int moq;
 
   CartModel({
     required this.productId,
@@ -31,6 +37,7 @@ class CartModel {
     required this.updatedAt,
     required this.productQuantity,
     required this.productTotalPrice,
+    this.moq = 1,
   });
 
   Map<String, dynamic> toMap() {
@@ -49,6 +56,7 @@ class CartModel {
       'updatedAt': updatedAt,
       'productQuantity': productQuantity,
       'productTotalPrice': productTotalPrice,
+      'moq': moq,
     };
   }
 
@@ -68,6 +76,7 @@ class CartModel {
       updatedAt: json['updatedAt'],
       productQuantity: json['productQuantity'],
       productTotalPrice: json['productTotalPrice'],
+      moq: (json['moq'] as num?)?.toInt() ?? 1,
     );
   }
 }
