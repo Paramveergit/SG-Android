@@ -1,8 +1,10 @@
 import 'package:e_comm/services/auth/email_auth_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../controllers/auth_controller.dart';
+import '../../controllers/get-device-token-controller.dart';
 import '../../theme/app_colors.dart';
 import '../auth-ui/home-router.dart';
 
@@ -220,7 +222,35 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
           if (!_isSignIn) {
             await Get.find<AuthController>().createUserInFirestore(userCredential.user!);
           }
-          
+
+          // FIX: email sign-in/sign-up never wrote a device token to
+          // this account's Firestore profile at all - only the Google
+          // sign-in path did. Combined with the notification-
+          // permission gap fixed alongside this, an email-authenticated
+          // customer would never receive a single push notification,
+          // regardless of permission being granted, because there was
+          // never a real token on their profile for a Cloud Function
+          // to send to in the first place. Saves/refreshes it here on
+          // every successful sign-in too, not just sign-up, since FCM
+          // tokens can rotate.
+          try {
+            String? deviceToken;
+            if (Get.isRegistered<GetDeviceTokenController>()) {
+              deviceToken = Get.find<GetDeviceTokenController>().deviceToken;
+            }
+            if (deviceToken != null && deviceToken.isNotEmpty) {
+              await FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(userCredential.user!.uid)
+                  .set({'userDeviceToken': deviceToken}, SetOptions(merge: true));
+            }
+          } catch (e) {
+            debugPrint('Could not save device token after email auth: $e');
+            // Not fatal to sign-in itself - worst case, this account
+            // just doesn't get push notifications until its next
+            // successful sign-in.
+          }
+
           // Route through centralized home router
           Get.offAll(() => HomeRouter());
         }
