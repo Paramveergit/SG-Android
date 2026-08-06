@@ -7,6 +7,7 @@ import '../admin-panel/admin-main-screen.dart';
 import '../auth-ui/sign-in-screen.dart';
 import '../user-panel/new-main-screen.dart';
 import '../../controllers/get-user-data-controller.dart';
+import '../../services/auth/google_auth_service.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../widgets/app_error_state.dart';
@@ -30,40 +31,13 @@ class _HomeRouterState extends State<HomeRouter> {
   }
 
   Future<_RouteResult> _decideNext() async {
-    // Check the synchronous snapshot first - by the time Dart's main()
-    // reaches this point (after awaiting Firebase.initializeApp()),
-    // the native SDK has typically already restored a persisted
-    // session into currentUser, making this the fast, reliable path
-    // on most cold starts.
-    //
-    // Only fall back to the stream if that's null - and even then,
-    // don't trust a single emission blindly. This used to just await
-    // authStateChanges().first, on the theory that "wait for the
-    // first real event" removes the race. It doesn't fully: on some
-    // Android configurations, the stream's very FIRST emission can
-    // itself arrive as a premature null before a corrected event
-    // follows a moment later - waiting for "the first event" just
-    // moves the race, it doesn't remove it. Reported as still
-    // happening after that fix shipped, which is exactly what this
-    // pattern would produce. Debug logging added below so if this
-    // still isn't enough on some device, we have real data instead of
-    // guessing again.
-    // Confirmed root cause of the earlier "logged out every time" reports
-    // was test-methodology, not a bug here: uninstalling/reinstalling the
-    // APK between test builds wipes local app storage, including
-    // Firebase Auth's persisted session - currentUser is correctly null
-    // on a genuine fresh install. Kept this check as the synchronous-
-    // first, stream-fallback pattern below regardless, since it's a
-    // real, valid improvement over a bare authStateChanges().first
-    // wait even though it wasn't the actual cause of what was reported.
+    // Check the synchronous snapshot first, then fall back to
+    // watching a few auth-state events if that's null - a more
+    // reliable pattern than trusting a single stream event blindly.
     User? user = FirebaseAuth.instance.currentUser;
     debugPrint('HomeRouter: currentUser snapshot = ${user?.uid ?? "null"}');
 
     if (user == null) {
-      // Give restoration a genuine chance to finish rather than
-      // trusting the very first stream event: take up to the first 3
-      // emissions (or 2.5s, whichever comes first), and use the first
-      // non-null one seen in that window.
       User? resolved;
       try {
         await for (final event in FirebaseAuth.instance
@@ -80,6 +54,28 @@ class _HomeRouterState extends State<HomeRouter> {
         debugPrint('HomeRouter: authStateChanges wait error: $e');
       }
       user = resolved;
+    }
+
+    if (user == null) {
+      // Confirmed via direct testing: ColorOS-family devices (Realme,
+      // OnePlus) aggressively kill the app process when swiped away
+      // in recents, wiping this app's own locally-persisted Firebase
+      // session - locking the app in recents (which stops that kill
+      // from happening) fixes it, proving this is OS behavior, not a
+      // bug in this app's own persistence. Samsung is unaffected.
+      // Rather than requiring every customer to discover and enable
+      // that lock manually, try to silently recover using Google's
+      // own cached account first - that lives at the Android account-
+      // manager/Play Services level, not inside this app's own
+      // private data, and isn't wiped by the same OEM behavior. Only
+      // falls through to Sign-In if that's also unavailable (a
+      // genuine sign-out, a fresh install, or an email/password
+      // account, which has no equivalent silent-recovery mechanism).
+      final silentUser = await GoogleAuthService().trySilentSignIn();
+      if (silentUser?.user != null) {
+        debugPrint('HomeRouter: recovered session via silent Google re-auth');
+        user = silentUser!.user;
+      }
     }
 
     if (user == null) {

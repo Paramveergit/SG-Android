@@ -119,6 +119,46 @@ class GoogleAuthService {
     }
   }
 
+  /// Attempts to silently re-establish a Firebase session using
+  /// Google's own cached account - no UI, no account picker, nothing
+  /// visible to the person using the app. This exists specifically
+  /// for OEM devices (ColorOS/OxygenOS - Realme, OnePlus, Oppo -
+  /// confirmed via direct testing) that aggressively kill the app
+  /// process when it's swiped away in the recents switcher, wiping
+  /// this app's own locally-persisted Firebase Auth session in the
+  /// process. Google's own account cache lives at the Android
+  /// account-manager/Play Services level, not inside this app's
+  /// private data - a fundamentally different, much better-protected
+  /// storage location that this same OEM behavior does not appear to
+  /// touch. Returns null (not an error) if there's genuinely no
+  /// cached Google account to fall back to - that's the expected,
+  /// correct outcome for an email/password account, or a device where
+  /// this really is a fresh sign-out/fresh install.
+  Future<UserCredential?> trySilentSignIn() async {
+    try {
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signInSilently();
+      if (googleUser == null) {
+        return null;
+      }
+
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final userCredential = await _auth.signInWithCredential(credential);
+      final user = userCredential.user;
+      if (user != null) {
+        await _upsertUserProfile(user);
+      }
+      return userCredential;
+    } catch (e) {
+      debugPrint('Silent Google re-auth failed: $e');
+      return null;
+    }
+  }
+
   Future<void> signOut() async {
     try {
       await Future.wait([
