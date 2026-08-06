@@ -2,6 +2,7 @@
 // Replaces the categories section with a modern filter system
 
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
@@ -46,17 +47,6 @@ class _ProductFeedWidgetState extends State<ProductFeedWidget> {
     'SG-4fe40f2', // Women's Top
   ];
 
-  // Categories that don't have products yet
-  final Set<String> emptyCategories = {
-    'SG-d33996c', // Boy's Bottomwear
-    'SG-c9dbc04', // Boy's Topwear
-    'SG-b4ca53f', // Girl's BottomWear
-    'SG-a6a6a05', // Girl's TopWear
-    // 'SG-5c2a4db', // Infant's Wear - REMOVED: This category has products!
-    'SG-3ad974f', // Women's Bottomwear
-    'SG-4fe40f2', // Women's Top
-  };
-
   // Category name mapping for display
   final Map<String, String> categoryNameMapping = {
     'SG-e2f8f74': 'Men\'s Innerwear', // Rename Innerwear to Men's Innerwear
@@ -75,9 +65,15 @@ class _ProductFeedWidgetState extends State<ProductFeedWidget> {
     // Home's), each of which provides its own AppBar/branding around it.
     return Column(
       children: [
-        // Search and Filter Section
-        _buildSearchAndFilterSection(),
-        
+        // Search bar (always visible)
+        _buildSearchBar(),
+
+        // Category grid - hidden while actively searching, so search
+        // results get the full remaining space instead of fighting
+        // the grid for room. Reappears the moment the search is
+        // cleared.
+        if (searchQuery.isEmpty) _buildCategoryFilters(),
+
         // Products List
         Expanded(
           child: _buildProductsGrid(),
@@ -86,42 +82,32 @@ class _ProductFeedWidgetState extends State<ProductFeedWidget> {
     );
   }
 
-  Widget _buildSearchAndFilterSection() {
+  Widget _buildSearchBar() {
     return Container(
       color: AppColors.surface,
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Column(
-        children: [
-          // Search Bar
-          TextField(
-            controller: _searchController,
-            decoration: InputDecoration(
-              hintText: 'Search products...',
-              prefixIcon: const Icon(Icons.search, color: AppColors.textSecondary),
-              suffixIcon: searchQuery.isNotEmpty
-                ? IconButton(
-                    onPressed: () {
-                      setState(() {
-                        searchQuery = '';
-                        _searchController.clear();
-                      });
-                    },
-                    icon: const Icon(Icons.clear, color: AppColors.textSecondary),
-                  )
-                : null,
-            ),
-            onChanged: (value) {
-              setState(() {
-                searchQuery = value.toLowerCase();
-              });
-            },
-          ),
-          
-          const SizedBox(height: AppSpacing.md),
-          
-          // Category Filter Chips
-          _buildCategoryFilters(),
-        ],
+      padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.md, AppSpacing.md, AppSpacing.sm),
+      child: TextField(
+        controller: _searchController,
+        decoration: InputDecoration(
+          hintText: 'Search products...',
+          prefixIcon: const Icon(Icons.search, color: AppColors.textSecondary),
+          suffixIcon: searchQuery.isNotEmpty
+            ? IconButton(
+                onPressed: () {
+                  setState(() {
+                    searchQuery = '';
+                    _searchController.clear();
+                  });
+                },
+                icon: const Icon(Icons.clear, color: AppColors.textSecondary),
+              )
+            : null,
+        ),
+        onChanged: (value) {
+          setState(() {
+            searchQuery = value.toLowerCase();
+          });
+        },
       ),
     );
   }
@@ -156,28 +142,27 @@ class _ProductFeedWidgetState extends State<ProductFeedWidget> {
           return const SizedBox(height: 40.0);
         }
 
-        return CategoryGridSelector(
-          key: const ValueKey('category_grid_selector'),
-          categories: snapshot.data!.docs,
-          selectedCategoryId: selectedCategoryId,
-          onCategorySelected: (categoryId) {
-            setState(() {
-              selectedCategoryId = categoryId;
-            });
-          },
-          categoryNameMapping: categoryNameMapping,
-          stableCategoryOrder: _stableCategoryOrder,
+        return Container(
+          color: AppColors.surface,
+          padding: const EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.md),
+          child: CategoryGridSelector(
+            key: const ValueKey('category_grid_selector'),
+            categories: snapshot.data!.docs,
+            selectedCategoryId: selectedCategoryId,
+            onCategorySelected: (categoryId) {
+              setState(() {
+                selectedCategoryId = categoryId;
+              });
+            },
+            categoryNameMapping: categoryNameMapping,
+            stableCategoryOrder: _stableCategoryOrder,
+          ),
         );
       },
     );
   }
 
   Widget _buildProductsGrid() {
-    // Check if selected category is empty
-    if (selectedCategoryId != null && emptyCategories.contains(selectedCategoryId)) {
-      return _buildComingSoonState();
-    }
-
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('products')
@@ -185,7 +170,6 @@ class _ProductFeedWidgetState extends State<ProductFeedWidget> {
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          print('Products stream error: ${snapshot.error}');
           return const AppErrorState(
             title: 'Could not load products',
             message: 'Please check your connection and try again.',
@@ -203,32 +187,35 @@ class _ProductFeedWidgetState extends State<ProductFeedWidget> {
 
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
           return const AppEmptyState(
-            icon: Icons.search_off,
-            title: 'No products found',
-            message: 'Try adjusting your search or filter',
+            icon: Icons.storefront_outlined,
+            title: 'No products available',
+            message: 'Please check back again soon.',
           );
         }
-        
-        // Debug: Print all product categories when no filter is applied
-        if (selectedCategoryId == null) {
-          for (var doc in snapshot.data!.docs) {
-            final productData = doc.data() as Map<String, dynamic>;
-            print('Product: ${productData['productName']} - Category: ${productData['categoryId']}');
-          }
-        }
-        
+
         final products = _filterProducts(snapshot.data!.docs);
-        print('After filtering: ${products.length} products');
 
         if (products.isEmpty) {
-          return const AppEmptyState(
-            icon: Icons.search_off,
-            title: 'No products found',
-            message: 'Try adjusting your search or filter',
-          );
+          // Distinct, more specific copy depending on why nothing
+          // matched - a mistyped search and an empty category are
+          // different situations and deserve different guidance.
+          if (searchQuery.isNotEmpty) {
+            return AppEmptyState(
+              icon: Icons.search_off,
+              title: 'No matching products found',
+              message: 'Please check your spelling, or try a different search term.',
+              actionLabel: 'Clear search',
+              onAction: () {
+                setState(() {
+                  searchQuery = '';
+                  _searchController.clear();
+                });
+              },
+            );
+          }
+          return _buildComingSoonState();
         }
 
-        print('Building product list with ${products.length} products');
         return ListView.builder(
           padding: const EdgeInsets.all(AppSpacing.md),
           physics: const AlwaysScrollableScrollPhysics(),
@@ -281,195 +268,32 @@ class _ProductFeedWidgetState extends State<ProductFeedWidget> {
     );
   }
 
-  // Smart category matching function
-  bool _isCategoryMatch(String selectedCategoryId, String productCategoryName, String productCategoryId) {
-    // We need to get the selected category name, not just the ID
-    // For now, let's use a simple approach based on the category ID patterns
-    
-    // Extract category name from the selected category ID
-    String selectedCategoryName = '';
-    
-    // Map category IDs to their names (this should match your database)
-    final categoryIdToName = {
-      'SG-d33996c': 'Boy\'s Bottomwear',
-      'SG-c9dbc04': 'Boy\'s Topwear', 
-      'SG-b4ca53f': 'Girl\'s BottomWear',
-      'SG-a6a6a05': 'Girl\'s TopWear',
-      'SG-5c2a4db': 'Infant\'s Wear',
-      'SG-e2f8f74': 'Men\'s Innerwear', // Updated name
-      'SG-e3e41cb': 'Men\'s Bottomwear',
-      'SG-bbb90f2': 'Men\'s TopWear',
-      'SG-3ad974f': 'Women\'s Bottomwear',
-      'SG-4fe40f2': 'Women\'s Top',
-    };
-    
-    selectedCategoryName = categoryIdToName[selectedCategoryId] ?? selectedCategoryId;
-    
-    final selectedLower = selectedCategoryName?.toLowerCase() ?? '';
-    final productNameLower = productCategoryName.toLowerCase();
-    
-    print('  🔍 Smart matching debug:');
-    print('    Selected Category ID: $selectedCategoryId');
-    print('    Selected Category Name: $selectedCategoryName');
-    print('    Selected Lower: $selectedLower');
-    print('    Product Category Name: $productCategoryName');
-    print('    Product Name Lower: $productNameLower');
-    
-    // Map category patterns for smart matching
-    final categoryPatterns = {
-      'bottomwear': ['bottomwear', 'bottom', 'pants', 'shorts', 'trousers', 'jeans'],
-      'topwear': ['topwear', 'top', 'shirt', 'tshirt', 'polo', 'vest'],
-      'innerwear': ['innerwear', 'inner', 'brief', 'underwear', 'vest'],
-      'boys': ['boy', 'boys', 'men', 'mens'],
-      'girls': ['girl', 'girls', 'women', 'womens'],
-      'mens': ['men', 'mens', 'boy', 'boys'],
-      'womens': ['women', 'womens', 'girl', 'girls'],
-      'infants': ['infant', 'infants', 'baby', 'babies'],
-    };
-    
-    // Check for exact category name matches
-    for (final entry in categoryPatterns.entries) {
-      final categoryKey = entry.key;
-      final patterns = entry.value;
-      
-      // If selected category contains this pattern
-      if (selectedLower.contains(categoryKey)) {
-        // Check if product category matches any of the patterns
-        for (final pattern in patterns) {
-          if (productNameLower.contains(pattern)) {
-            print('  ✅ Smart category match: $categoryKey -> $pattern');
-            return true;
-          }
-        }
-      }
-    }
-    
-    // Direct category ID mapping for Boy's/Girl's categories
-    if (selectedCategoryId == 'SG-d33996c') { // Boy's Bottomwear
-      if (productCategoryId == 'SG-e3e41cb') { // Men's Bottomwear
-        print('  ✅ Direct ID match: Boy\'s Bottomwear -> Men\'s Bottomwear');
-        return true;
-      }
-    }
-    
-    if (selectedCategoryId == 'SG-c9dbc04') { // Boy's Topwear
-      if (productCategoryId == 'SG-bbb90f2') { // Men's TopWear
-        print('  ✅ Direct ID match: Boy\'s Topwear -> Men\'s TopWear');
-        return true;
-      }
-    }
-    
-    if (selectedCategoryId == 'SG-b4ca53f') { // Girl's BottomWear
-      if (productCategoryId == 'SG-3ad974f') { // Women's Bottomwear
-        print('  ✅ Direct ID match: Girl\'s BottomWear -> Women\'s Bottomwear');
-        return true;
-      }
-    }
-    
-    if (selectedCategoryId == 'SG-a6a6a05') { // Girl's TopWear
-      if (productCategoryId == 'SG-4fe40f2') { // Women's Top
-        print('  ✅ Direct ID match: Girl\'s TopWear -> Women\'s Top');
-        return true;
-      }
-    }
-    
-    // Special case: Boy's Bottomwear should match Men's Bottomwear
-    if (selectedLower.contains('boy') && selectedLower.contains('bottomwear')) {
-      if (productNameLower.contains('men') && productNameLower.contains('bottomwear')) {
-        print('  ✅ Special match: Boy\'s Bottomwear -> Men\'s Bottomwear');
-        return true;
-      }
-    }
-    
-    // Special case: Boy's Topwear should match Men's Topwear
-    if (selectedLower.contains('boy') && selectedLower.contains('topwear')) {
-      if (productNameLower.contains('men') && productNameLower.contains('topwear')) {
-        print('  ✅ Special match: Boy\'s Topwear -> Men\'s Topwear');
-        return true;
-      }
-    }
-    
-    // Special case: Girl's BottomWear should match Women's Bottomwear
-    if (selectedLower.contains('girl') && selectedLower.contains('bottomwear')) {
-      if (productNameLower.contains('women') && productNameLower.contains('bottomwear')) {
-        print('  ✅ Special match: Girl\'s BottomWear -> Women\'s Bottomwear');
-        return true;
-      }
-    }
-    
-    // Special case: Girl's TopWear should match Women's Top
-    if (selectedLower.contains('girl') && selectedLower.contains('topwear')) {
-      if (productNameLower.contains('women') && productNameLower.contains('top')) {
-        print('  ✅ Special match: Girl\'s TopWear -> Women\'s Top');
-        return true;
-      }
-    }
-    
-    print('  ❌ No match found');
-    return false;
-  }
-
   List<QueryDocumentSnapshot> _filterProducts(List<QueryDocumentSnapshot> products) {
     List<QueryDocumentSnapshot> filteredProducts = products;
-    
-        // Apply category filter if selected
-        if (selectedCategoryId != null && selectedCategoryId!.isNotEmpty) {
-          print('🔍 Applying category filter for: $selectedCategoryId');
-          print('🔍 Total products before filtering: ${filteredProducts.length}');
+
+    // Category filter: exact categoryId match only. This used to run
+    // through ~125 lines of "smart" pattern-matching (checking if the
+    // category name string contained words like "bottom"/"pants"/
+    // "shorts") as a workaround for some historical bad data. The
+    // problem: those patterns were never actually gender-specific -
+    // selecting "Men's Bottomwear" matched anything containing
+    // "bottom" or "pants" regardless of which gender/age section it
+    // actually belonged to, which is exactly why Boy's/Girl's/Women's
+    // items were showing up under Men's Bottomwear. categoryId is a
+    // precise identifier - there's no good reason to fuzzy-match it.
+    // Any product with a genuinely correct categoryId is matched
+    // correctly by this alone. A product that still doesn't show up
+    // under its real category has bad data at the source (re-saving
+    // it via the admin app fixes it), which is a data problem to
+    // solve there, not something to paper over with more guessing here.
+    if (selectedCategoryId != null && selectedCategoryId!.isNotEmpty) {
       filteredProducts = filteredProducts.where((doc) {
         final productData = doc.data() as Map<String, dynamic>;
         final productCategoryId = productData['categoryId']?.toString() ?? '';
-        final productCategoryName = productData['categoryName']?.toString() ?? '';
-        final productName = productData['productName']?.toString() ?? '';
-        
-        print('Checking product: $productName');
-        print('  Product categoryId: $productCategoryId');
-        print('  Product categoryName: $productCategoryName');
-        print('  Selected categoryId: $selectedCategoryId');
-        
-        // Check if categoryId matches (including old format)
-        if (productCategoryId == selectedCategoryId || 
-            productCategoryId == 'RxString: $selectedCategoryId') {
-          print('  ✅ Direct categoryId match!');
-          return true;
-        }
-        
-        // Check for category name matching (case-insensitive)
-        final productCategoryNameLower = productCategoryName.toLowerCase();
-        final selectedCategoryName = categoryNameMapping[selectedCategoryId] ?? selectedCategoryId;
-        final selectedCategoryNameLower = selectedCategoryName?.toLowerCase() ?? '';
-        
-        if (productCategoryNameLower.contains(selectedCategoryNameLower) ||
-            selectedCategoryNameLower.contains(productCategoryNameLower)) {
-          print('  ✅ Category name match: $productCategoryName -> $selectedCategoryName');
-          return true;
-        }
-        
-        // Special handling for Infant's Wear
-        if (selectedCategoryId == 'SG-5c2a4db') { // Infant's Wear filter
-          final productNameLower = productName.toLowerCase();
-          if (productCategoryNameLower.contains('infant') || 
-              productCategoryNameLower.contains('baby') ||
-              productNameLower.contains('infant') ||
-              productNameLower.contains('baby')) {
-            print('  ✅ Infant\'s Wear match: $productCategoryName / $productName');
-            return true;
-          }
-        }
-        
-        // Smart category matching for all filter categories
-        final isMatch = _isCategoryMatch(selectedCategoryId!, productCategoryName, productCategoryId);
-        if (isMatch) {
-          print('  ✅ Smart category match!');
-        } else {
-          print('  ❌ No match');
-        }
-        return isMatch;
+        return productCategoryId == selectedCategoryId;
       }).toList();
-      
-      print('🔍 Products after filtering: ${filteredProducts.length}');
     }
-    
+
     // Apply search filter if query exists
     if (searchQuery.isNotEmpty) {
       filteredProducts = filteredProducts.where((doc) {
@@ -710,10 +534,19 @@ class CategoryGridSelector extends StatelessWidget {
               fit: StackFit.expand,
               children: [
                 if (hasRealImage)
-                  Image.network(
-                    categoryImg,
+                  // FIX: raw Image.network re-fetches from network on
+                  // every rebuild once its widget is disposed and
+                  // recreated (e.g. navigating away from Home and back)
+                  // - Flutter's own image cache is keyed to the widget
+                  // lifecycle, not truly persistent across navigation.
+                  // CachedNetworkImage keeps a real disk/memory cache
+                  // keyed by URL, so the second-and-later loads are
+                  // instant instead of re-downloading every time.
+                  CachedNetworkImage(
+                    imageUrl: categoryImg,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(color: AppColors.brandTintBg),
+                    placeholder: (_, __) => Container(color: AppColors.surfaceMuted),
+                    errorWidget: (_, __, ___) => Container(color: AppColors.brandTintBg),
                   )
                 else
                   Container(color: AppColors.brandTintBg),
