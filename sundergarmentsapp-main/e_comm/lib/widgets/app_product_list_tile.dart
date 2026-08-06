@@ -2,9 +2,11 @@
 
 import 'package:flutter/material.dart';
 import '../models/product-model.dart';
+import '../models/stock-status.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
+import 'stock_indicator.dart';
 
 /// List-row counterpart to AppProductCard. Used wherever products are
 /// shown as a scrolling list rather than a grid - PV specifically asked
@@ -121,6 +123,17 @@ class AppProductListTile extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 2),
+                  // GUARD: only show a stock indicator when the product
+                  // actually has variants with tracked stock. Most
+                  // existing products predate the inventory system and
+                  // have an empty variants list - totalStock would
+                  // default to 0 for those, which would wrongly show
+                  // "Out of Stock" on products that are perfectly
+                  // available, just not using per-variant tracking yet.
+                  if (product.variants.isNotEmpty) ...[
+                    StockIndicator(status: product.stockStatus),
+                    const SizedBox(height: 2),
+                  ],
                   Text(
                     _moqAndCategoryLabel(product),
                     maxLines: 1,
@@ -140,27 +153,31 @@ class AppProductListTile extends StatelessWidget {
                       ),
                       const Spacer(),
                       if (onAddToCart != null)
-                        SizedBox(
-                          height: 32,
-                          child: ElevatedButton(
-                            onPressed: isAddingToCart ? null : onAddToCart,
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                              minimumSize: const Size(0, 32),
-                              textStyle: const TextStyle(fontSize: 12),
+                        Builder(builder: (context) {
+                          final isOutOfStock = product.variants.isNotEmpty &&
+                              product.stockStatus == StockStatus.outOfStock;
+                          return SizedBox(
+                            height: 32,
+                            child: ElevatedButton(
+                              onPressed: (isAddingToCart || isOutOfStock) ? null : onAddToCart,
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                                minimumSize: const Size(0, 32),
+                                textStyle: const TextStyle(fontSize: 12),
+                              ),
+                              child: isAddingToCart
+                                  ? const SizedBox(
+                                      width: 14,
+                                      height: 14,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: AppColors.textOnBrand,
+                                      ),
+                                    )
+                                  : Text(isOutOfStock ? 'Out of stock' : 'Add to cart'),
                             ),
-                            child: isAddingToCart
-                                ? const SizedBox(
-                                    width: 14,
-                                    height: 14,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: AppColors.textOnBrand,
-                                    ),
-                                  )
-                                : const Text('Add to cart'),
-                          ),
-                        ),
+                          );
+                        }),
                     ],
                   ),
                 ],

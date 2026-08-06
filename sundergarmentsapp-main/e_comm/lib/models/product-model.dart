@@ -1,6 +1,7 @@
 // ignore_for_file: file_names
 
 import 'product-variant-model.dart';
+import 'stock-status.dart';
 
 class ProductModel {
   final String productId;
@@ -15,13 +16,10 @@ class ProductModel {
   final String productDescription;
   final dynamic createdAt;
   final dynamic updatedAt;
-  // FIX: these three were never read here at all, even though the Admin
-  // App has written them to every product document for a while now -
-  // this model just silently ignored them. Optional with safe defaults
-  // so nothing that already constructs a ProductModel elsewhere breaks.
   final String fabric;
   final int moq;
   final List<ProductVariantModel> variants;
+  final int lowStockThreshold;
 
   ProductModel({
     required this.productId,
@@ -39,7 +37,15 @@ class ProductModel {
     this.fabric = '',
     this.moq = 0,
     this.variants = const [],
+    this.lowStockThreshold = 5,
   });
+
+  /// Total stock across every size/color combination - mirrors the
+  /// admin app's identical getter, same underlying data.
+  int get totalStock => variants.fold(0, (sum, v) => sum + v.stock);
+
+  StockStatus get stockStatus =>
+      StockStatusX.fromStock(totalStock, lowStockThreshold: lowStockThreshold);
 
   Map<String, dynamic> toMap() {
     return {
@@ -58,6 +64,7 @@ class ProductModel {
       'fabric': fabric,
       'moq': moq,
       'variants': variants.map((v) => v.toMap()).toList(),
+      'lowStockThreshold': lowStockThreshold,
     };
   }
 
@@ -75,8 +82,6 @@ class ProductModel {
       productDescription: json['productDescription'],
       createdAt: json['createdAt'],
       updatedAt: json['updatedAt'],
-      // Safe fallbacks - older product documents (or ones created before
-      // this fix) may not have these fields at all.
       fabric: json['fabric']?.toString() ?? '',
       moq: (json['moq'] as num?)?.toInt() ?? 0,
       variants: json['variants'] is List
@@ -85,6 +90,7 @@ class ProductModel {
               .map((v) => ProductVariantModel.fromMap(Map<String, dynamic>.from(v)))
               .toList()
           : const [],
+      lowStockThreshold: (json['lowStockThreshold'] as num?)?.toInt() ?? 5,
     );
   }
 }

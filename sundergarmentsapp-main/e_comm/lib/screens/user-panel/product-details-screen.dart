@@ -17,6 +17,8 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_radius.dart';
 import '../../widgets/cart_icon_badge.dart';
+import '../../widgets/stock_indicator.dart';
+import '../../models/stock-status.dart';
 
 class ProductDetailsScreen extends StatefulWidget {
   ProductModel productModel;
@@ -578,6 +580,22 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
                           ),
                         ),
                       ),
+                      // GUARD: same as the list tile - only show this
+                      // for products that actually have tracked
+                      // variants, otherwise a product with no
+                      // inventory data set up yet would wrongly show
+                      // as Out of Stock.
+                      if (widget.productModel.variants.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 8.0),
+                          child: Align(
+                            alignment: Alignment.topLeft,
+                            child: StockIndicator(
+                              status: widget.productModel.stockStatus,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(8.0, 0.0, 8.0, 4.0),
                         child: Container(
@@ -661,6 +679,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
                           child: AnimatedBuilder(
                             animation: _shakeAnimation,
                             builder: (context, child) {
+                              final isOutOfStock = widget.productModel.variants.isNotEmpty &&
+                                  widget.productModel.stockStatus == StockStatus.outOfStock;
                               return Transform.translate(
                                 offset: Offset(_shakeAnimation.value * 
                                     ((_shakeController.value * 4).round() % 2 == 0 ? 1 : -1), 0),
@@ -669,11 +689,16 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
                                     width: Get.width * 0.7,
                                     height: Get.height / 16,
                                     decoration: BoxDecoration(
-                                      color: AppColors.brand,
+                                      color: isOutOfStock ? AppColors.surfaceMuted : AppColors.brand,
                                       borderRadius: BorderRadius.circular(AppRadius.lg),
                                     ),
                                     child: TextButton(
-                                      child: _isAddingToCart
+                                      child: isOutOfStock
+                                        ? const Text(
+                                            "Out of stock",
+                                            style: TextStyle(color: AppColors.textSecondary),
+                                          )
+                                        : _isAddingToCart
                                         ? const Row(
                                             mainAxisAlignment: MainAxisAlignment.center,
                                             children: [
@@ -702,7 +727,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
                                               color: AppColors.textOnBrand,
                                             ),
                                           ),
-                                      onPressed: _isAddingToCart ? null : () async {
+                                      onPressed: isOutOfStock ? null : (_isAddingToCart ? null : () async {
                                         // Check if quantity is valid (allow mass orders)
                                         if (_selectedQuantity == null || _selectedQuantity! < 1) {
                                           _triggerShakeAnimation();
@@ -749,7 +774,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
                                             });
                                           }
                                         }
-                                      },
+                                      }),
                                     ),
                                   ),
                                 ),
