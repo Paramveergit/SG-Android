@@ -25,8 +25,8 @@ import '../../theme/app_spacing.dart';
 import '../../widgets/welcome-popup-widget.dart';
 import '../../widgets/product_feed_widget.dart';
 import '../../widgets/cart_icon_badge.dart';
+import '../../widgets/support_sheet.dart';
 import '../../controllers/welcome-popup-controller.dart';
-import '../user-panel/cart-screen.dart' as cart_screen;
 import '../user-panel/profile-screen.dart';
 import '../user-panel/order-detail-screen.dart';
 import '../user-panel/all-orders-screen.dart';
@@ -147,7 +147,9 @@ class _NewMainScreenState extends State<NewMainScreen> {
         toolbarHeight: 72.0,
         title: _buildHeaderWithLogo(),
         centerTitle: false,
-        actions: const [],
+        actions: const [
+          CartIconWithBadge(),
+        ],
       ),
       body: const SafeArea(
         child: ProductFeedWidget(),
@@ -168,21 +170,18 @@ class _NewMainScreenState extends State<NewMainScreen> {
             );
             break;
           case 2:
-            Get.to(() => cart_screen.CartScreen());
+            Get.to(() => const ProfileScreen());
             break;
           case 3:
-            Get.to(() => const ProfileScreen());
+            showSupportOptionsSheet(context);
             break;
         }
       },
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.storefront_outlined), label: 'Home'),
         BottomNavigationBarItem(icon: Icon(Icons.receipt_long_outlined), label: 'Orders'),
-        BottomNavigationBarItem(
-          icon: CartIconWithBadge(iconSize: 24, padding: EdgeInsets.zero, enableTap: false),
-          label: 'Cart',
-        ),
         BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
+        BottomNavigationBarItem(icon: Icon(Icons.help_outline), label: 'Help'),
       ],
     );
   }
