@@ -30,15 +30,56 @@ class _HomeRouterState extends State<HomeRouter> {
   }
 
   Future<_RouteResult> _decideNext() async {
-    // FIX: FirebaseAuth.instance.currentUser is a synchronous snapshot
-    // that can genuinely be null for a moment on app cold start, before
-    // Firebase finishes restoring the persisted session from local
-    // storage. Checking it immediately - as this code used to - can
-    // wrongly conclude "not signed in" and bounce to Sign-In even
-    // though a valid session exists a beat later. Waiting for the
-    // first real auth-state event removes that race entirely.
-    final User? user = await FirebaseAuth.instance.authStateChanges().first;
+    // Check the synchronous snapshot first - by the time Dart's main()
+    // reaches this point (after awaiting Firebase.initializeApp()),
+    // the native SDK has typically already restored a persisted
+    // session into currentUser, making this the fast, reliable path
+    // on most cold starts.
+    //
+    // Only fall back to the stream if that's null - and even then,
+    // don't trust a single emission blindly. This used to just await
+    // authStateChanges().first, on the theory that "wait for the
+    // first real event" removes the race. It doesn't fully: on some
+    // Android configurations, the stream's very FIRST emission can
+    // itself arrive as a premature null before a corrected event
+    // follows a moment later - waiting for "the first event" just
+    // moves the race, it doesn't remove it. Reported as still
+    // happening after that fix shipped, which is exactly what this
+    // pattern would produce. Debug logging added below so if this
+    // still isn't enough on some device, we have real data instead of
+    // guessing again.
+    User? user = FirebaseAuth.instance.currentUser;
+    debugPrint('HomeRouter: currentUser snapshot = ${user?.uid ?? "null"}');
+
     if (user == null) {
+      // Give restoration a genuine chance to finish rather than
+      // trusting the very first stream event: take up to the first 3
+      // emissions (or 2.5s, whichever comes first), and use the LAST
+      // non-null one seen in that window. A session that's actually
+      // there tends to show up within the first event or two once
+      // restoration completes; this only costs real time when there
+      // truly is no session, which is the correct case to end up at
+      // Sign-In anyway.
+      User? resolved;
+      try {
+        await for (final event in FirebaseAuth.instance
+            .authStateChanges()
+            .take(3)
+            .timeout(const Duration(milliseconds: 2500), onTimeout: (sink) => sink.close())) {
+          debugPrint('HomeRouter: authStateChanges event = ${event?.uid ?? "null"}');
+          if (event != null) {
+            resolved = event;
+            break;
+          }
+        }
+      } catch (e) {
+        debugPrint('HomeRouter: authStateChanges wait error: $e');
+      }
+      user = resolved;
+    }
+
+    if (user == null) {
+      debugPrint('HomeRouter: no session found after full check - routing to Sign-In');
       return _RouteResult.widget(const SignInScreen());
     }
 
