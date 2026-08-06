@@ -9,6 +9,7 @@ import '../user-panel/new-main-screen.dart';
 import '../../controllers/get-user-data-controller.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
+import '../../utils/auth_diagnostics.dart';
 import '../../widgets/app_error_state.dart';
 
 /// Centralized post-auth router.
@@ -49,7 +50,7 @@ class _HomeRouterState extends State<HomeRouter> {
     // still isn't enough on some device, we have real data instead of
     // guessing again.
     User? user = FirebaseAuth.instance.currentUser;
-    debugPrint('HomeRouter: currentUser snapshot = ${user?.uid ?? "null"}');
+    AuthDiagnostics.log('currentUser snapshot = ${user?.uid ?? "null"}');
 
     if (user == null) {
       // Give restoration a genuine chance to finish rather than
@@ -66,21 +67,21 @@ class _HomeRouterState extends State<HomeRouter> {
             .authStateChanges()
             .take(3)
             .timeout(const Duration(milliseconds: 2500), onTimeout: (sink) => sink.close())) {
-          debugPrint('HomeRouter: authStateChanges event = ${event?.uid ?? "null"}');
+          AuthDiagnostics.log('authStateChanges event = ${event?.uid ?? "null"}');
           if (event != null) {
             resolved = event;
             break;
           }
         }
       } catch (e) {
-        debugPrint('HomeRouter: authStateChanges wait error: $e');
+        AuthDiagnostics.log('authStateChanges wait error: $e');
       }
       user = resolved;
     }
 
     if (user == null) {
-      debugPrint('HomeRouter: no session found after full check - routing to Sign-In');
-      return _RouteResult.widget(const SignInScreen());
+      AuthDiagnostics.log('no session found after full check - routing to Sign-In');
+      return _RouteResult.widget(const SignInScreen(showAuthDiagnostics: true));
     }
 
     try {
