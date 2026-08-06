@@ -226,12 +226,14 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
   void initState() {
     super.initState();
     
-    // FIX: quantity used to start empty (null), showing a literal
-    // "Qty" placeholder until the person tapped + once - looked broken,
-    // not like a real quantity selector. Defaults to 1 now, like any
-    // normal e-commerce quantity field.
-    _selectedQuantity = 1;
-    _quantityController = TextEditingController(text: '1');
+    // Default quantity is one full lot (MOQ pieces), not one piece -
+    // per direct clarification: the qty stepper represents lots, and
+    // a fresh product view should start at "1 lot" rather than
+    // "1 piece" (which would be a fraction of a lot for a wholesale
+    // MOQ product and make no practical sense to actually order).
+    final int startingQuantity = widget.productModel.moq > 0 ? widget.productModel.moq : 1;
+    _selectedQuantity = startingQuantity;
+    _quantityController = TextEditingController(text: startingQuantity.toString());
     
     // Initialize shake animation
     _shakeController = AnimationController(
@@ -321,12 +323,19 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Minus button
+                    // Minus button - steps by one full lot (MOQ pieces)
+                    // at a time, per direct clarification. Floors at
+                    // one lot via the stepper - going below that is
+                    // still possible by typing a custom number directly
+                    // into the field below, which stays completely
+                    // free-form for exactly that "partial/custom
+                    // quantity" case.
                     GestureDetector(
                       onTap: () {
-                        if (_selectedQuantity != null && _selectedQuantity! > 1) {
+                        final moq = widget.productModel.moq > 0 ? widget.productModel.moq : 1;
+                        if (_selectedQuantity != null && _selectedQuantity! > moq) {
                           setState(() {
-                            _selectedQuantity = _selectedQuantity! - 1;
+                            _selectedQuantity = _selectedQuantity! - moq;
                             _quantityController.text = _selectedQuantity.toString();
                             _quantityError = false;
                           });
@@ -336,7 +345,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
                         width: 32,
                         height: 32,
                         decoration: BoxDecoration(
-                          color: (_selectedQuantity != null && _selectedQuantity! > 1)
+                          color: (_selectedQuantity != null && _selectedQuantity! > (widget.productModel.moq > 0 ? widget.productModel.moq : 1))
                               ? AppColors.textPrimary 
                               : AppColors.surfaceMuted,
                           borderRadius: const BorderRadius.only(
@@ -346,7 +355,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
                         ),
                         child: Icon(
                           Icons.remove,
-                          color: (_selectedQuantity != null && _selectedQuantity! > 1)
+                          color: (_selectedQuantity != null && _selectedQuantity! > (widget.productModel.moq > 0 ? widget.productModel.moq : 1))
                               ? AppColors.textOnBrand 
                               : AppColors.textSecondary,
                           size: 16,
@@ -409,11 +418,12 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
                         ),
                       ),
                     ),
-                    // Plus button
+                    // Plus button - steps by one full lot (MOQ pieces)
                     GestureDetector(
                       onTap: () {
+                        final moq = widget.productModel.moq > 0 ? widget.productModel.moq : 1;
                         setState(() {
-                          _selectedQuantity = (_selectedQuantity ?? 0) + 1;
+                          _selectedQuantity = (_selectedQuantity ?? 0) + moq;
                           _quantityController.text = _selectedQuantity.toString();
                           _quantityError = false;
                         });
@@ -442,6 +452,25 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
           ),
         );
       },
+    );
+  }
+
+  Widget _buildLotCaption() {
+    final moq = widget.productModel.moq > 0 ? widget.productModel.moq : 1;
+    final qty = _selectedQuantity ?? 0;
+    if (moq <= 1 || qty <= 0) return const SizedBox.shrink();
+
+    final isExactLots = qty % moq == 0;
+    final String caption = isExactLots
+        ? '${qty ~/ moq} lot${qty ~/ moq == 1 ? '' : 's'} of $moq pcs each'
+        : 'Custom quantity (MOQ is $moq pcs per lot)';
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8.0, 4.0, 8.0, 0.0),
+      child: Text(
+        caption,
+        style: const TextStyle(fontSize: 12.0, color: AppColors.textSecondary),
+      ),
     );
   }
 
@@ -613,6 +642,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
                           ],
                         ),
                       ),
+                      _buildLotCaption(),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(8.0, 0.0, 8.0, 4.0),
                         child: _buildSpecsTable(),
@@ -818,6 +848,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
         productTotalPrice: double.parse(widget.productModel.isSale
             ? widget.productModel.salePrice
             : widget.productModel.fullPrice) * quantityIncrement,
+        moq: widget.productModel.moq,
       );
 
       await documentReference.set(cartModel.toMap());

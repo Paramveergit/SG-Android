@@ -181,6 +181,11 @@ class _CartScreenState extends State<CartScreen> {
                 productQuantity: doc['productQuantity'],
                 productTotalPrice:
                     double.parse(doc['productTotalPrice'].toString()),
+                // Safe optional read, not doc['moq'] directly - that
+                // throws for any cart item added before this field
+                // existed, and plenty of real carts already have items
+                // like that sitting in Firestore right now.
+                moq: ((doc.data() as Map<String, dynamic>)['moq'] as num?)?.toInt() ?? 1,
               ));
             }
             productPriceController.totalPrice.value = cartTotal;
@@ -365,12 +370,14 @@ class _CartScreenState extends State<CartScreen> {
               const SizedBox(height: 4),
               Row(
                 children: [
-                  // Compact qty stepper - tap the number to type a
-                  // specific quantity directly for bulk orders.
+                  // Compact qty stepper - steps by one full lot (MOQ
+                  // pieces) at a time, per direct clarification. Tap
+                  // the number to type an exact custom quantity for
+                  // partial/custom orders instead.
                   _buildCompactQtyButton(
                     icon: Icons.remove,
-                    enabled: cartModel.productQuantity > 1,
-                    onTap: () => _updateQuantity(cartModel, cartModel.productQuantity - 1),
+                    enabled: cartModel.productQuantity > cartModel.moq,
+                    onTap: () => _updateQuantity(cartModel, cartModel.productQuantity - cartModel.moq),
                   ),
                   GestureDetector(
                     onTap: () => _showQuantityEditDialog(cartModel),
@@ -386,7 +393,7 @@ class _CartScreenState extends State<CartScreen> {
                   _buildCompactQtyButton(
                     icon: Icons.add,
                     enabled: true,
-                    onTap: () => _updateQuantity(cartModel, cartModel.productQuantity + 1),
+                    onTap: () => _updateQuantity(cartModel, cartModel.productQuantity + cartModel.moq),
                   ),
                   const Spacer(),
                   Text(
