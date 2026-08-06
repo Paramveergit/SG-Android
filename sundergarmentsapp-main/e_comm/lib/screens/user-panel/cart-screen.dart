@@ -32,6 +32,7 @@ class _CartScreenState extends State<CartScreen> {
   TextEditingController nameController = TextEditingController();
   TextEditingController phoneController = TextEditingController();
   TextEditingController addressController = TextEditingController();
+  final GlobalKey<FormState> _deliveryFormKey = GlobalKey<FormState>();
   
   // Variables for order placement
   String? customerToken;
@@ -631,22 +632,74 @@ class _CartScreenState extends State<CartScreen> {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
               ),
               const SizedBox(height: AppSpacing.md),
-              TextFormField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: 'Name'),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              TextFormField(
-                controller: phoneController,
-                textInputAction: TextInputAction.next,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(labelText: 'Phone'),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              TextFormField(
-                controller: addressController,
-                maxLines: 2,
-                decoration: const InputDecoration(labelText: 'Address'),
+              Form(
+                key: _deliveryFormKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextFormField(
+                      controller: nameController,
+                      textCapitalization: TextCapitalization.words,
+                      decoration: const InputDecoration(labelText: 'Name'),
+                      validator: (value) {
+                        final v = value?.trim() ?? '';
+                        if (v.isEmpty) return 'Enter the recipient\'s name';
+                        if (v.length < 2) return 'Name looks too short';
+                        if (!RegExp(r"^[a-zA-Z\s.'-]+$").hasMatch(v)) {
+                          return 'Name should only contain letters';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    TextFormField(
+                      controller: phoneController,
+                      textInputAction: TextInputAction.next,
+                      keyboardType: TextInputType.phone,
+                      decoration: const InputDecoration(
+                        labelText: 'Phone',
+                        hintText: '10-digit mobile number',
+                      ),
+                      validator: (value) {
+                        final digitsOnly = (value ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+                        // Accept a bare 10-digit number or one with a
+                        // leading 91 country code (91XXXXXXXXXX = 12
+                        // digits) - either way the actual mobile number
+                        // must be 10 digits starting 6-9, the real
+                        // Indian mobile number format, not just "any
+                        // digits typed" like the old check allowed.
+                        String mobile = digitsOnly;
+                        if (mobile.length == 12 && mobile.startsWith('91')) {
+                          mobile = mobile.substring(2);
+                        }
+                        if (mobile.isEmpty) return 'Enter a contact number';
+                        if (mobile.length != 10 || !RegExp(r'^[6-9]\d{9}$').hasMatch(mobile)) {
+                          return 'Enter a valid 10-digit mobile number';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    TextFormField(
+                      controller: addressController,
+                      maxLines: 2,
+                      textCapitalization: TextCapitalization.sentences,
+                      decoration: const InputDecoration(
+                        labelText: 'Address',
+                        hintText: 'Full delivery address with pin code',
+                      ),
+                      validator: (value) {
+                        final v = value?.trim() ?? '';
+                        if (v.isEmpty) return 'Enter a delivery address';
+                        if (v.length < 12) return 'Enter your full address, not just a placeholder';
+                        if (!RegExp(r'[0-9]').hasMatch(v)) {
+                          return 'Include a house/street number or pin code';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: AppSpacing.lg),
               SizedBox(
@@ -654,9 +707,7 @@ class _CartScreenState extends State<CartScreen> {
                 height: 50,
                 child: ElevatedButton(
                 onPressed: () async {
-                  if (nameController.text != '' &&
-                      phoneController.text != '' &&
-                      addressController.text != '') {
+                  if (_deliveryFormKey.currentState?.validate() ?? false) {
                     name = nameController.text.trim();
                     phone = phoneController.text.trim();
                     address = addressController.text.trim();
@@ -677,8 +728,6 @@ class _CartScreenState extends State<CartScreen> {
                       phone: phone!,
                       address: address!,
                     );
-                  } else {
-                    print("Fill The Details");
                   }
                 },
                 child: Text(

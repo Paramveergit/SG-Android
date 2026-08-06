@@ -9,59 +9,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:get/get.dart';
-import 'package:url_launcher/url_launcher.dart';
-
-// Consolidated WhatsApp function for multiple products
-Future<void> openConsolidatedWhatsApp(List<Map<String, dynamic>> orderItems,
-    String customerName, String customerPhone) async {
-  try {
-    final number = "+919830464031";
-
-    String message = "ORDER CONFIRMATION!\n\n";
-    message += "Hi, $customerName just placed an order!\n";
-    message += "Order details:\n";
-
-    double grandTotal = 0;
-
-    for (int i = 0; i < orderItems.length; i++) {
-      var item = orderItems[i];
-      double itemTotal =
-          double.parse(item['salePrice'].toString()) * item['productQuantity'];
-      grandTotal += itemTotal;
-
-      message += "• Product: ${item['productName']}\n";
-      message += "• ID: ${item['productId']}\n";
-      message += "• Price: ₹${item['salePrice']}\n";
-      message += "• Quantity: ${item['productQuantity']}\n";
-      message += "• Total: ₹$itemTotal\n\n";
-    }
-
-    message += "GRAND TOTAL: ₹$grandTotal";
-
-    final url = 'https://wa.me/$number?text=${Uri.encodeComponent(message)}';
-
-    if (await canLaunchUrl(Uri.parse(url))) {
-      await launchUrl(
-        Uri.parse(url),
-        mode: LaunchMode.externalApplication,
-      );
-    } else {
-      final webUrl =
-          'https://web.whatsapp.com/send?phone=$number&text=${Uri.encodeComponent(message)}';
-      if (await canLaunchUrl(Uri.parse(webUrl))) {
-        await launchUrl(
-          Uri.parse(webUrl),
-          mode: LaunchMode.externalApplication,
-        );
-      } else {
-        throw 'Could not launch WhatsApp. Please install WhatsApp or try again.';
-      }
-    }
-  } catch (e) {
-    print('WhatsApp launch error: $e');
-    // Don't throw error - WhatsApp failure shouldn't prevent order completion
-  }
-}
 
 void placeOrder({
   required BuildContext context,
@@ -108,10 +55,7 @@ void placeOrder({
       return;
     }
 
-    // Build the WhatsApp-message data (kept in the original simple map
-    // shape) and the real order items (in the new schema) from the
-    // same cart documents, in one pass.
-    List<Map<String, dynamic>> orderItemsForWhatsApp = [];
+    // Build the real order items (new schema) from the cart documents.
     List<OrderItemModel> orderItems = [];
 
     for (var doc in documents) {
@@ -123,8 +67,6 @@ void placeOrder({
           data['productQuantity'] == null) {
         throw 'Invalid product data in cart';
       }
-
-      orderItemsForWhatsApp.add(data);
 
       final unitPrice = double.tryParse(data['salePrice'].toString()) ?? 0.0;
       final quantity = (data['productQuantity'] as num?)?.toInt() ?? 1;
@@ -177,14 +119,14 @@ void placeOrder({
       }
     }
 
-    if (orderItemsForWhatsApp.isNotEmpty) {
-      try {
-        await openConsolidatedWhatsApp(
-            orderItemsForWhatsApp, customerName, customerPhone);
-      } catch (e) {
-        print('WhatsApp notification failed: $e');
-      }
-    }
+    // FIX (removed, not disabled): this used to force-open WhatsApp
+    // on the CUSTOMER's own phone after every order, pre-filled with
+    // an order-confirmation message addressed to the seller's number -
+    // disruptive UX (yanks the customer out of the app right after
+    // checkout, requires WhatsApp installed) and not what "order
+    // confirmation" should mean from the customer's side. Staff order
+    // notifications are handled separately via Cloud Functions/FCM,
+    // not by routing through the customer's own WhatsApp.
 
     print("Order Confirmed Successfully");
     Get.snackbar(
