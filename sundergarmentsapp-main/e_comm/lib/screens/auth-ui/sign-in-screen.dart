@@ -6,9 +6,18 @@ import 'package:e_comm/screens/auth-ui/sign-up-screen.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../theme/app_colors.dart';
+import '../../utils/auth_diagnostics.dart';
 
 class SignInScreen extends StatefulWidget {
-  const SignInScreen({super.key});
+  // True only when HomeRouter itself decided there's no session and
+  // routed here - never true for a deliberate sign-out or a fresh
+  // install. Shows a small tappable diagnostic banner with the real
+  // Firebase Auth state HomeRouter actually saw, so this can be
+  // screenshotted/copied and sent directly instead of needing adb
+  // logcat access to investigate further.
+  final bool showAuthDiagnostics;
+
+  const SignInScreen({super.key, this.showAuthDiagnostics = false});
 
   @override
   State<SignInScreen> createState() => _SignInScreenState();
@@ -16,6 +25,27 @@ class SignInScreen extends StatefulWidget {
 
 class _SignInScreenState extends State<SignInScreen> {
   final AuthController authController = Get.put(AuthController());
+
+  void _showDiagnosticsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Login diagnostic'),
+        content: SingleChildScrollView(
+          child: SelectableText(
+            AuthDiagnostics.summary(),
+            style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -92,6 +122,36 @@ class _SignInScreenState extends State<SignInScreen> {
                   ),
                   textAlign: TextAlign.center,
                 ),
+
+                if (widget.showAuthDiagnostics) ...[
+                  const SizedBox(height: 16),
+                  GestureDetector(
+                    onTap: _showDiagnosticsDialog,
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 24),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.25),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: AppColors.textOnBrand.withOpacity(0.4)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.info_outline, size: 14, color: AppColors.textOnBrand.withOpacity(0.8)),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Session not found - tap for details',
+                            style: TextStyle(
+                              color: AppColors.textOnBrand.withOpacity(0.8),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
                 
                 // Spacing before buttons
                 SizedBox(height: Get.height * 0.2),
