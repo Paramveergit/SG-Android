@@ -1,6 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Internet permission required for Google Sign-In -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Required on Android 13+ (API 33+) for any notification to
+         actually display - without this declared here AND requested
+         at runtime, FCM messages still arrive but the system silently
+         suppresses the visible notification. See
+         GetDeviceTokenController for the runtime request. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     
     <application
         android:label="Sunder Garments"
