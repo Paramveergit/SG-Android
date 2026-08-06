@@ -47,14 +47,14 @@ void showSupportOptionsSheet(BuildContext context) {
           _SupportOption(
             icon: Icons.phone,
             title: 'Call Us',
-            subtitle: '+91 9830464031',
+            subtitle: '+91 7850078100',
             onTap: () async {
               Get.back();
-              final uri = Uri(scheme: 'tel', path: '+919830464031');
+              final uri = Uri(scheme: 'tel', path: '+917850078100');
               if (!await launchUrl(uri)) {
                 Get.snackbar(
                   'Couldn\'t open dialer',
-                  'You can reach us at +91 9830464031',
+                  'You can reach us at +91 7850078100',
                   snackPosition: SnackPosition.BOTTOM,
                 );
               }
@@ -69,11 +69,11 @@ void showSupportOptionsSheet(BuildContext context) {
               final message = Uri.encodeComponent(
                   "Hi, I need help with my Sunder Garments order.");
               final uri =
-                  Uri.parse('https://wa.me/919830464031?text=$message');
+                  Uri.parse('https://wa.me/917850078100?text=$message');
               if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
                 Get.snackbar(
                   'Couldn\'t open WhatsApp',
-                  'Message us directly at +91 9830464031',
+                  'Message us directly at +91 7850078100',
                   snackPosition: SnackPosition.BOTTOM,
                 );
               }
@@ -82,18 +82,18 @@ void showSupportOptionsSheet(BuildContext context) {
           _SupportOption(
             icon: Icons.email,
             title: 'Email',
-            subtitle: 'support@sundergarments.com',
+            subtitle: 'sundergarmentss@gmail.com',
             onTap: () async {
               Get.back();
               final uri = Uri(
                 scheme: 'mailto',
-                path: 'support@sundergarments.com',
+                path: 'sundergarmentss@gmail.com',
                 query: 'subject=${Uri.encodeComponent("Support request")}',
               );
               if (!await launchUrl(uri)) {
                 Get.snackbar(
                   'Couldn\'t open mail app',
-                  'Email us at support@sundergarments.com',
+                  'Email us at sundergarmentss@gmail.com',
                   snackPosition: SnackPosition.BOTTOM,
                 );
               }
