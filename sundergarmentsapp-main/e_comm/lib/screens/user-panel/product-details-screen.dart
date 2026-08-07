@@ -36,6 +36,13 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
   
   // Quantity management
   int? _selectedQuantity;
+  // Resolved from the product's first real photo once loaded - the
+  // carousel_slider package needs one fixed aspect ratio for its
+  // whole viewport (a real constraint, it can't resize per-slide
+  // while swiping), so this uses the first image's own real shape
+  // instead of a guessed constant. Falls back to a sensible portrait
+  // default while it's still loading.
+  double _carouselAspectRatio = 0.8;
   bool _quantityError = false;
   late TextEditingController _quantityController;
   
@@ -236,6 +243,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
     final int startingQuantity = widget.productModel.moq > 0 ? widget.productModel.moq : 1;
     _selectedQuantity = startingQuantity;
     _quantityController = TextEditingController(text: startingQuantity.toString());
+
+    _resolveCarouselAspectRatio();
     
     // Initialize shake animation
     _shakeController = AnimationController(
@@ -262,6 +271,27 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
       parent: _highlightController,
       curve: Curves.easeInOut,
     ));
+  }
+
+  void _resolveCarouselAspectRatio() {
+    if (widget.productModel.productImages.isEmpty) return;
+    final firstImageUrl = widget.productModel.productImages[0].toString();
+    final provider = CachedNetworkImageProvider(firstImageUrl);
+    final stream = provider.resolve(const ImageConfiguration());
+    late final ImageStreamListener listener;
+    listener = ImageStreamListener((info, synchronousCall) {
+      if (mounted && info.image.height > 0) {
+        setState(() {
+          _carouselAspectRatio = info.image.width / info.image.height;
+        });
+      }
+      stream.removeListener(listener);
+    }, onError: (error, stackTrace) {
+      // Keep the default aspect ratio - the placeholder/errorWidget in
+      // the carousel itself already handles a genuinely broken image.
+      stream.removeListener(listener);
+    });
+    stream.addListener(listener);
   }
   
   @override
@@ -364,9 +394,13 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
                         ),
                       ),
                     ),
-                    // Quantity input field
+                    // Quantity input field - widened from 50 to 76:
+                    // at 50px, a bold 16px 4-digit number (e.g. "2000",
+                    // a completely normal MOQ-lot quantity now that
+                    // qty represents lots) genuinely didn't fit and
+                    // visibly clipped its last digit.
                     Container(
-                      width: 50,
+                      width: 76,
                       height: 32,
                       decoration: const BoxDecoration(
                         color: AppColors.surface,
@@ -524,18 +558,23 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(10.0),
                       child: Container(
-                        // FIX: was BoxFit.cover inside a fixed 1.5
-                        // (landscape) aspectRatio box - every portrait
-                        // fashion photo (which is nearly all of them)
-                        // got its top/bottom cropped, cutting off heads.
-                        // BoxFit.contain guarantees the full image is
-                        // always visible regardless of its real aspect
-                        // ratio, with a neutral fill behind it instead
-                        // of jarring blank bars.
+                        // FIX: was BoxFit.contain inside a fixed 0.8
+                        // aspect ratio box - solved the earlier
+                        // cropping problem, but any photo that didn't
+                        // happen to match that exact ratio now showed
+                        // large wasted empty bars around it instead.
+                        // The carousel viewport now sizes itself to
+                        // the product's own first real photo
+                        // (resolved once in initState, same caching
+                        // as everywhere else - see
+                        // _resolveCarouselAspectRatio), so cover and
+                        // contain become the same thing once the box
+                        // actually matches the image - no crop, no
+                        // wasted space.
                         color: AppColors.surfaceMuted,
                         child: CachedNetworkImage(
                           imageUrl: imageUrl,
-                          fit: BoxFit.contain,
+                          fit: BoxFit.cover,
                           width: Get.width - 20,
                           placeholder: (context, url) => const ColoredBox(
                             color: AppColors.surfaceMuted,
@@ -552,7 +591,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
                 options: CarouselOptions(
                   scrollDirection: Axis.horizontal,
                   autoPlay: true,
-                  aspectRatio: 0.8,
+                  aspectRatio: _carouselAspectRatio,
                   viewportFraction: 0.9,
                   enlargeCenterPage: true,
                 ),
