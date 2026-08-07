@@ -1,6 +1,7 @@
 // ignore_for_file: file_names
 
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../models/product-model.dart';
 import '../models/stock-status.dart';
 import '../theme/app_colors.dart';
@@ -65,10 +66,18 @@ class AppProductListTile extends StatelessWidget {
                     width: 84,
                     height: 84,
                     child: hasImage
-                        ? Image.network(
-                            product.productImages[0],
+                        // FIX: raw Image.network doesn't persist a
+                        // real cache across navigation the way
+                        // CachedNetworkImage does - same bug already
+                        // found and fixed for category images, missed
+                        // here. Every list tile was silently
+                        // re-downloading its thumbnail on every visit
+                        // to this screen.
+                        ? CachedNetworkImage(
+                            imageUrl: product.productImages[0],
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
+                            placeholder: (_, __) => Container(color: AppColors.surfaceMuted),
+                            errorWidget: (_, __, ___) => Container(
                               color: AppColors.surfaceMuted,
                               child: const Icon(
                                 Icons.image_not_supported_outlined,

@@ -1,5 +1,6 @@
 // ignore_for_file: file_names, prefer_const_constructors, avoid_unnecessary_containers, prefer_const_literals_to_create_immutables, sized_box_for_whitespace, avoid_print
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:e_comm/models/cart-model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
@@ -339,12 +340,17 @@ class _CartScreenState extends State<CartScreen> {
       children: [
         ClipRRect(
           borderRadius: BorderRadius.circular(AppRadius.sm),
-          child: Image.network(
-            cartModel.productImages[0],
+          child: CachedNetworkImage(
+            imageUrl: cartModel.productImages[0],
             width: 48,
             height: 48,
             fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => Container(
+            placeholder: (_, __) => Container(
+              width: 48,
+              height: 48,
+              color: AppColors.surfaceMuted,
+            ),
+            errorWidget: (_, __, ___) => Container(
               width: 48,
               height: 48,
               color: AppColors.surfaceMuted,
@@ -382,7 +388,9 @@ class _CartScreenState extends State<CartScreen> {
                   GestureDetector(
                     onTap: () => _showQuantityEditDialog(cartModel),
                     child: Container(
-                      width: 36,
+                      // Widened from 36 to 48 - same digit-clipping
+                      // risk as the product page's qty field, same fix.
+                      width: 48,
                       alignment: Alignment.center,
                       child: Text(
                         '${cartModel.productQuantity}',
