@@ -82,9 +82,15 @@ class _FullscreenImageViewerState extends State<FullscreenImageViewer> {
     final tapPosition = details.localPosition;
     final x = -tapPosition.dx * (targetScale - 1);
     final y = -tapPosition.dy * (targetScale - 1);
-    _transformationController.value = Matrix4.identity()
-      ..translate(x, y)
-      ..scale(targetScale);
+    // Column-major 4x4: uniform x/y scale plus a translation, built
+    // directly (Matrix4.translate/scale are deprecated in newer
+    // vector_math releases).
+    _transformationController.value = Matrix4(
+      targetScale, 0, 0, 0,
+      0, targetScale, 0, 0,
+      0, 0, 1, 0,
+      x, y, 0, 1,
+    );
   }
 
   @override
