@@ -28,11 +28,36 @@ class _ProductFeedWidgetState extends State<ProductFeedWidget> {
   String? selectedCategoryId;
   String searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
-  
+
   // Loading state management to prevent multiple taps
   final Set<String> _addingToCartProducts = <String>{};
-  
-  
+
+  // Collapses the category row out of the way while the person is
+  // actively scrolling through products (swipe down = browsing, give
+  // that space to products), and brings it back the moment they
+  // scroll back up toward the top - same behavior as most shopping
+  // apps' category/filter bars.
+  bool _categoriesCollapsed = false;
+
+  bool _handleProductListScroll(ScrollNotification notification) {
+    if (notification is UserScrollNotification) {
+      if (notification.direction == ScrollDirection.reverse &&
+          !_categoriesCollapsed) {
+        setState(() => _categoriesCollapsed = true);
+      } else if (notification.direction == ScrollDirection.forward &&
+          _categoriesCollapsed) {
+        setState(() => _categoriesCollapsed = false);
+      }
+    } else if (notification is ScrollUpdateNotification) {
+      // Snap back open once scrolled back to the very top, even if
+      // the last directional nudge was still "reverse".
+      if (notification.metrics.pixels <= 0 && _categoriesCollapsed) {
+        setState(() => _categoriesCollapsed = false);
+      }
+    }
+    return false;
+  }
+
   // Stable category order to prevent position shifting
   static const List<String> _stableCategoryOrder = [
     'SG-5c2a4db', // Infant's Wear
@@ -71,12 +96,28 @@ class _ProductFeedWidgetState extends State<ProductFeedWidget> {
         // Category grid - hidden while actively searching, so search
         // results get the full remaining space instead of fighting
         // the grid for room. Reappears the moment the search is
-        // cleared.
-        if (searchQuery.isEmpty) _buildCategoryFilters(),
+        // cleared. Also collapses away (rather than just disappearing)
+        // while the person swipes down through the product list, via
+        // AnimatedAlign + heightFactor - the StreamBuilder underneath
+        // stays mounted the whole time so category data never
+        // re-fetches or flickers, only its visible height changes.
+        if (searchQuery.isEmpty)
+          ClipRect(
+            child: AnimatedAlign(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeInOut,
+              alignment: Alignment.topCenter,
+              heightFactor: _categoriesCollapsed ? 0.0 : 1.0,
+              child: _buildCategoryFilters(),
+            ),
+          ),
 
         // Products List
         Expanded(
-          child: _buildProductsGrid(),
+          child: NotificationListener<ScrollNotification>(
+            onNotification: _handleProductListScroll,
+            child: _buildProductsGrid(),
+          ),
         ),
       ],
     );

@@ -17,6 +17,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_radius.dart';
 import '../../widgets/cart_icon_badge.dart';
+import '../../widgets/fullscreen_image_viewer.dart';
 import '../../widgets/stock_indicator.dart';
 import '../../models/stock-status.dart';
 
@@ -36,13 +37,17 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
   
   // Quantity management
   int? _selectedQuantity;
-  // Resolved from the product's first real photo once loaded - the
-  // carousel_slider package needs one fixed aspect ratio for its
-  // whole viewport (a real constraint, it can't resize per-slide
-  // while swiping), so this uses the first image's own real shape
-  // instead of a guessed constant. Falls back to a sensible portrait
-  // default while it's still loading.
-  double _carouselAspectRatio = 0.8;
+  // FIX: this used to resolve the product's real photo aspect ratio
+  // and feed it to CarouselOptions.aspectRatio, which sizes the
+  // carousel's height off the full screen width regardless of any
+  // surrounding constraint - so a tall/portrait photo blew the box up
+  // to take over almost the whole screen, pushing price/specs/
+  // add-to-cart below the fold. A fixed height (see _carouselHeight,
+  // used directly as CarouselOptions.height below) keeps every
+  // product's details card reachable without excess scrolling no
+  // matter what shape its photos are; BoxFit.cover inside that fixed
+  // box still shows the photo cleanly.
+  static const double _carouselHeight = 300.0;
   bool _quantityError = false;
   late TextEditingController _quantityController;
   
@@ -244,8 +249,6 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
     _selectedQuantity = startingQuantity;
     _quantityController = TextEditingController(text: startingQuantity.toString());
 
-    _resolveCarouselAspectRatio();
-    
     // Initialize shake animation
     _shakeController = AnimationController(
       duration: const Duration(milliseconds: 500),
@@ -273,27 +276,6 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
     ));
   }
 
-  void _resolveCarouselAspectRatio() {
-    if (widget.productModel.productImages.isEmpty) return;
-    final firstImageUrl = widget.productModel.productImages[0].toString();
-    final provider = CachedNetworkImageProvider(firstImageUrl);
-    final stream = provider.resolve(const ImageConfiguration());
-    late final ImageStreamListener listener;
-    listener = ImageStreamListener((info, synchronousCall) {
-      if (mounted && info.image.height > 0) {
-        setState(() {
-          _carouselAspectRatio = info.image.width / info.image.height;
-        });
-      }
-      stream.removeListener(listener);
-    }, onError: (error, stackTrace) {
-      // Keep the default aspect ratio - the placeholder/errorWidget in
-      // the carousel itself already handles a genuinely broken image.
-      stream.removeListener(listener);
-    });
-    stream.addListener(listener);
-  }
-  
   @override
   void dispose() {
     _quantityController.dispose();
@@ -528,49 +510,31 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               //product images
-              SizedBox(
-                height: Get.height / 8,
-              ),
+              const SizedBox(height: AppSpacing.sm),
               CarouselSlider(
-                items: widget.productModel.productImages.map((imageUrl) {
+                items: widget.productModel.productImages.asMap().entries.map((entry) {
+                  final imageIndex = entry.key;
+                  final imageUrl = entry.value;
                   return GestureDetector(
-                    onTap: () {
-                      showDialog(
-                        context: context,
-                        builder: (context) => Dialog(
-                          backgroundColor: Colors.black,
-                          child: InteractiveViewer(
-                            child: CachedNetworkImage(
-                              imageUrl: imageUrl,
-                              fit: BoxFit.contain,
-                              placeholder: (context, url) => Center(
-                                child: CupertinoActivityIndicator(),
-                              ),
-                              errorWidget: (context, url, error) => const Icon(
-                                Icons.error,
-                                color: AppColors.dangerFg,
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
+                    onTap: () => FullscreenImageViewer.open(
+                      context,
+                      imageUrls: widget.productModel.productImages,
+                      initialIndex: imageIndex,
+                    ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(10.0),
                       child: Container(
-                        // FIX: was BoxFit.contain inside a fixed 0.8
-                        // aspect ratio box - solved the earlier
-                        // cropping problem, but any photo that didn't
-                        // happen to match that exact ratio now showed
-                        // large wasted empty bars around it instead.
-                        // The carousel viewport now sizes itself to
-                        // the product's own first real photo
-                        // (resolved once in initState, same caching
-                        // as everywhere else - see
-                        // _resolveCarouselAspectRatio), so cover and
-                        // contain become the same thing once the box
-                        // actually matches the image - no crop, no
-                        // wasted space.
+                        // A fixed carousel height (set via
+                        // CarouselOptions.height below) instead of an
+                        // aspect-ratio-driven one that scaled off the
+                        // photo's own shape with no upper bound - a
+                        // tall/portrait photo used to balloon this box
+                        // (and everything below it) to take over
+                        // almost the whole screen, pushing price/specs/
+                        // add-to-cart off-screen. BoxFit.cover keeps
+                        // every photo filling that fixed box cleanly;
+                        // tapping opens the real photo uncropped in the
+                        // full-screen zoom viewer.
                         color: AppColors.surfaceMuted,
                         child: CachedNetworkImage(
                           imageUrl: imageUrl,
@@ -591,13 +555,24 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
                 options: CarouselOptions(
                   scrollDirection: Axis.horizontal,
                   autoPlay: true,
-                  aspectRatio: _carouselAspectRatio,
+                  height: _carouselHeight,
                   viewportFraction: 0.9,
                   enlargeCenterPage: true,
                 ),
               ),
-              SizedBox(
-                height: Get.height / 20,
+              const SizedBox(height: AppSpacing.sm),
+              // Tap-to-zoom hint - the carousel itself no longer makes
+              // this obvious now that it's capped to a smaller box.
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(Icons.zoom_in, size: 14, color: AppColors.textSecondary),
+                  SizedBox(width: 4),
+                  Text(
+                    'Tap photo to zoom',
+                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  ),
+                ],
               ),
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),

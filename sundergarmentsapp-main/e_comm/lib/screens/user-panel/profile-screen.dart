@@ -42,29 +42,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             // User Profile Section
             _buildProfileHeader(),
-            
-            const SizedBox(height: 24.0),
-            
+
+            const SizedBox(height: 14.0),
+
             // Order History Section
             _buildOrderHistorySection(),
-            
-            const SizedBox(height: 24.0),
-            
+
+            const SizedBox(height: 14.0),
+
             // Account Actions Section
             _buildAccountActions(),
-            
-            const SizedBox(height: 32.0),
+
+            const SizedBox(height: 16.0),
           ],
         ),
       ),
     );
   }
 
+  // FIX: page optimization - this screen has very little actual content
+  // (an avatar, a name, four stats, up to 5 recent orders, two action
+  // buttons) but used to need a full scroll to see all of it, purely
+  // from oversized padding/margins and a 2x2 stats grid that could be
+  // one row. Tightened throughout so the whole page reads at a glance
+  // with far less scrolling, without removing any information.
   Widget _buildProfileHeader() {
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.all(16.0),
-      padding: const EdgeInsets.all(24.0),
+      margin: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 0),
+      padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -74,53 +80,53 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           // Profile Avatar
           Container(
-            width: 80.0,
-            height: 80.0,
+            width: 64.0,
+            height: 64.0,
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.fromBorderSide(BorderSide(color: AppColors.brand, width: 3.0)),
+              border: Border.fromBorderSide(BorderSide(color: AppColors.brand, width: 2.5)),
             ),
             child: CircleAvatar(
-              radius: 36.0,
+              radius: 28.0,
               backgroundColor: AppColors.brand,
-              backgroundImage: user?.photoURL != null 
-                ? NetworkImage(user!.photoURL!) 
+              backgroundImage: user?.photoURL != null
+                ? NetworkImage(user!.photoURL!)
                 : null,
-              child: user?.photoURL == null 
+              child: user?.photoURL == null
                 ? const Icon(
                     Icons.person,
                     color: AppColors.textOnBrand,
-                    size: 40.0,
+                    size: 32.0,
                   )
                 : null,
             ),
           ),
-          
-          const SizedBox(height: 16.0),
-          
+
+          const SizedBox(height: 10.0),
+
           // User Name
           Text(
             user?.displayName ?? 'User',
             style: const TextStyle(
-              fontSize: 24.0,
+              fontSize: 19.0,
               fontWeight: FontWeight.bold,
               color: AppColors.textPrimary,
             ),
           ),
-          
-          const SizedBox(height: 4.0),
-          
+
+          const SizedBox(height: 2.0),
+
           // User Email
           if (user?.email != null)
             Text(
               user!.email!,
               style: const TextStyle(
-                fontSize: 14.0,
+                fontSize: 13.0,
                 color: AppColors.textSecondary,
               ),
             ),
-          
-          const SizedBox(height: 16.0),
+
+          const SizedBox(height: 14.0),
 
           // Stats grid
           StreamBuilder<List<OrderModel>>(
@@ -158,39 +164,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
               final memberSince = user?.metadata.creationTime;
 
-              return Column(
+              // FIX: was two separate spaceEvenly rows of 2 items each
+              // (with a 16px gap between them) - a single row of all 4
+              // stats shows the exact same information in roughly half
+              // the vertical space.
+              return Row(
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildStatItem(
-                        icon: Icons.shopping_bag_outlined,
-                        label: 'Orders',
-                        value: orders.length.toString(),
-                      ),
-                      _buildStatItem(
-                        icon: Icons.payments_outlined,
-                        label: 'Avg. order value',
-                        value: nonCancelled.isEmpty
-                            ? '\u2014'
-                            : '\u20b9${avgOrderValue.toStringAsFixed(0)}',
-                      ),
-                    ],
+                  Expanded(
+                    child: _buildStatItem(
+                      icon: Icons.shopping_bag_outlined,
+                      label: 'Orders',
+                      value: orders.length.toString(),
+                    ),
                   ),
-                  const SizedBox(height: 16.0),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildStatItem(
-                        icon: Icons.calendar_today_outlined,
-                        label: 'Member since',
-                        value: memberSince != null
-                            ? _formatMonthYear(memberSince)
-                            : '\u2014',
-                      ),
-                      _buildLastOrderStatItem(lastOrder),
-                    ],
+                  Expanded(
+                    child: _buildStatItem(
+                      icon: Icons.payments_outlined,
+                      label: 'Avg. order value',
+                      value: nonCancelled.isEmpty
+                          ? '\u2014'
+                          : '\u20b9${avgOrderValue.toStringAsFixed(0)}',
+                    ),
                   ),
+                  Expanded(
+                    child: _buildStatItem(
+                      icon: Icons.calendar_today_outlined,
+                      label: 'Member since',
+                      value: memberSince != null
+                          ? _formatMonthYear(memberSince)
+                          : '\u2014',
+                    ),
+                  ),
+                  Expanded(child: _buildLastOrderStatItem(lastOrder)),
                 ],
               );
             },
@@ -217,44 +222,58 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
     }
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(Icons.history, color: AppColors.brand, size: 24.0),
-        const SizedBox(height: 8.0),
-        StatusBadge(status: lastOrder.status),
+        const Icon(Icons.history, color: AppColors.brand, size: 18.0),
         const SizedBox(height: 4.0),
+        StatusBadge(status: lastOrder.status),
+        const SizedBox(height: 2.0),
         const Text(
           'Last order',
-          style: TextStyle(fontSize: 14.0, color: AppColors.textSecondary),
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 10.5, color: AppColors.textSecondary),
         ),
       ],
     );
   }
 
+  // Compact stat tile: all four now share one row (see the stats grid
+  // above), so each gets roughly a quarter of the card's width -
+  // smaller type and a 2-line, center-aligned label keep longer ones
+  // ("Avg. order value", "Member since") from clipping or overflowing.
   Widget _buildStatItem({
     required IconData icon,
     required String label,
     required String value,
   }) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Icon(
           icon,
           color: AppColors.brand,
-          size: 24.0,
+          size: 18.0,
         ),
-        const SizedBox(height: 8.0),
+        const SizedBox(height: 4.0),
         Text(
           value,
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: const TextStyle(
-            fontSize: 20.0,
+            fontSize: 15.0,
             fontWeight: FontWeight.bold,
             color: AppColors.textPrimary,
           ),
         ),
+        const SizedBox(height: 1.0),
         Text(
           label,
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
           style: const TextStyle(
-            fontSize: 14.0,
+            fontSize: 10.5,
             color: AppColors.textSecondary,
           ),
         ),
@@ -265,7 +284,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildOrderHistorySection() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -315,8 +334,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ],
           ),
           
-          const SizedBox(height: 20.0),
-          
+          const SizedBox(height: 12.0),
+
           // Orders List
           StreamBuilder<List<OrderModel>>(
             stream: user != null
@@ -450,7 +469,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildAccountActions() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
