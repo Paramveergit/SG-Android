@@ -518,7 +518,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
                   return GestureDetector(
                     onTap: () => FullscreenImageViewer.open(
                       context,
-                      imageUrls: widget.productModel.productImages,
+                      // ProductModel.productImages is a raw `List`
+                      // (List<dynamic>) - cast explicitly since the
+                      // viewer takes a typed List<String>.
+                      imageUrls: List<String>.from(widget.productModel.productImages),
                       initialIndex: imageIndex,
                     ),
                     child: ClipRRect(
