@@ -7,7 +7,6 @@ import 'package:get/get.dart';
 import '../models/user-model.dart';
 import '../services/auth/google_auth_service.dart';
 import '../services/auth/email_auth_service.dart';
-import '../screens/user-panel/new-main-screen.dart';
 import '../screens/auth-ui/home-router.dart';
 
 class AuthController extends GetxController {

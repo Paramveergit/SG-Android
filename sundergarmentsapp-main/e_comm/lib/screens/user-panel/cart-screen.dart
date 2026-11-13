@@ -1,4 +1,4 @@
-// ignore_for_file: file_names, prefer_const_constructors, avoid_unnecessary_containers, prefer_const_literals_to_create_immutables, sized_box_for_whitespace, avoid_print
+// ignore_for_file: file_names, prefer_const_constructors, avoid_unnecessary_containers, prefer_const_literals_to_create_immutables, sized_box_for_whitespace
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:e_comm/models/cart-model.dart';
@@ -89,7 +89,7 @@ class _CartScreenState extends State<CartScreen> {
       }
     } catch (e) {
       // Non-fatal - if this fails, the sheet just opens blank like before.
-      print('Could not pre-fill checkout details: $e');
+      debugPrint('Could not pre-fill checkout details: $e');
     }
   }
 
@@ -114,7 +114,7 @@ class _CartScreenState extends State<CartScreen> {
     } catch (e) {
       // Non-fatal - the order itself already succeeded by the time this
       // runs; failing to save the profile shouldn't block the user.
-      print('Could not save checkout details to profile: $e');
+      debugPrint('Could not save checkout details to profile: $e');
     }
   }
 

@@ -1,4 +1,4 @@
-// ignore_for_file: file_names, avoid_print, unused_local_variable, prefer_const_constructors, deprecated_member_use, prefer_const_declarations
+// ignore_for_file: file_names, unused_local_variable, prefer_const_constructors, deprecated_member_use, prefer_const_declarations
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:e_comm/models/order-item-model.dart';
@@ -52,7 +52,7 @@ Future<void> _redirectToWhatsAppOrderSummary(OrderModel order) async {
   try {
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   } catch (e) {
-    print('WhatsApp order-summary redirect failed: $e');
+    debugPrint('WhatsApp order-summary redirect failed: $e');
     // A customer without WhatsApp installed (or who dismisses it)
     // shouldn't lose their already-successful order over this - the
     // order is already saved by the time this runs, this is a
@@ -164,7 +164,7 @@ void placeOrder({
             .delete()
             .timeout(Duration(seconds: 30));
       } catch (e) {
-        print('Error deleting cart item ${doc.id}: $e');
+        debugPrint('Error deleting cart item ${doc.id}: $e');
         // Don't fail the whole checkout just because cart cleanup had
         // an issue - the order itself already succeeded.
       }
@@ -176,8 +176,6 @@ void placeOrder({
     // customer sees WhatsApp open right after their order is
     // confirmed, not after being routed back to Home first.
     await _redirectToWhatsAppOrderSummary(createdOrder);
-
-    print("Order Confirmed Successfully");
     Get.snackbar(
       "Order Confirmed",
       "Thank you for your order!",
@@ -189,7 +187,7 @@ void placeOrder({
     EasyLoading.dismiss();
     Get.offAll(() => HomeRouter());
   } catch (e) {
-    print("Order placement error: $e");
+    debugPrint("Order placement error: $e");
     EasyLoading.dismiss();
 
     String errorMessage = "Failed to place order. Please try again.";

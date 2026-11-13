@@ -1,4 +1,5 @@
-// ignore_for_file: file_names, unused_local_variable, unused_field, avoid_print
+import 'package:flutter/foundation.dart';
+// ignore_for_file: file_names, unused_local_variable, unused_field
 
 import 'package:e_comm/controllers/get-device-token-controller.dart';
 import 'package:e_comm/screens/auth-ui/home-router.dart';
@@ -74,7 +75,7 @@ class GoogleSignInController extends GetxController {
         errorMessage,
         snackPosition: SnackPosition.BOTTOM,
       );
-      print("Sign-in failed with error: $e");
+      debugPrint("Sign-in failed with error: $e");
     }
   }
 

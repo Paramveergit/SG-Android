@@ -133,7 +133,7 @@ class _ProductFeedWidgetState extends State<ProductFeedWidget> {
       stream: _categoriesStream,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          print('Category stream error: ${snapshot.error}');
+          debugPrint('Category stream error: ${snapshot.error}');
           return const SizedBox(height: 40.0);
         }
 

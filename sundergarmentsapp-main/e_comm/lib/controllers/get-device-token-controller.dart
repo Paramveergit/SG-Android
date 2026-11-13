@@ -1,4 +1,5 @@
-// ignore_for_file: file_names, unnecessary_overrides, unused_local_variable, avoid_print
+import 'package:flutter/foundation.dart';
+// ignore_for_file: file_names, unnecessary_overrides, unused_local_variable
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:get/get.dart';
@@ -31,9 +32,8 @@ class GetDeviceTokenController extends GetxController {
         badge: true,
         sound: true,
       );
-      print('Notification permission status: ${settings.authorizationStatus}');
     } catch (e) {
-      print('Notification permission request failed: $e');
+      debugPrint('Notification permission request failed: $e');
       // Don't block token fetch on this - a denied/failed permission
       // request shouldn't prevent the app from working, it just means
       // notifications won't display until the person enables them
@@ -49,7 +49,6 @@ class GetDeviceTokenController extends GetxController {
 
       if (token != null) {
         deviceToken = token;
-        print("token : $deviceToken");
         update();
       }
     } catch (e) {

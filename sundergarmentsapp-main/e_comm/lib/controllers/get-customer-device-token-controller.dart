@@ -1,4 +1,5 @@
-// ignore_for_file: avoid_print, file_names
+import 'package:flutter/foundation.dart';
+// ignore_for_file: file_names
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 
@@ -11,7 +12,7 @@ Future<String> getCustomerDeviceToken() async {
       throw Exception("Error");
     }
   } catch (e) {
-    print("Errro $e");
+    debugPrint("Errro $e");
     throw Exception("Error");
   }
 }

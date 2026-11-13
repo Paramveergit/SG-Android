@@ -1,4 +1,4 @@
-// ignore_for_file: file_names, must_be_immutable, prefer_const_constructors, prefer_const_literals_to_create_immutables, avoid_unnecessary_containers, prefer_interpolation_to_compose_strings, unused_local_variable, avoid_print, prefer_const_declarations, deprecated_member_use, sized_box_for_whitespace
+// ignore_for_file: file_names, must_be_immutable, prefer_const_constructors, prefer_const_literals_to_create_immutables, avoid_unnecessary_containers, prefer_interpolation_to_compose_strings, unused_local_variable, prefer_const_declarations, deprecated_member_use, sized_box_for_whitespace
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:carousel_slider/carousel_slider.dart';
@@ -1058,8 +1058,6 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
         'productQuantity': updatedQuantity,
         'productTotalPrice': totalPrice
       });
-
-      print("product exists");
     } else {
       await FirebaseFirestore.instance.collection('cart').doc(uId).set(
         {
@@ -1089,8 +1087,6 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
       );
 
       await documentReference.set(cartModel.toMap());
-
-      print("product added");
     }
   }
 }
