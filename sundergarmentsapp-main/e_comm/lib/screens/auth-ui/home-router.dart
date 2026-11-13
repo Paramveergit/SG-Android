@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../admin-panel/admin-main-screen.dart';
 import '../auth-ui/sign-in-screen.dart';
 import '../user-panel/new-main-screen.dart';
 import '../../controllers/get-user-data-controller.dart';
@@ -88,9 +87,10 @@ class _HomeRouterState extends State<HomeRouter> {
       final userData = await getUserDataController.getUserData(user.uid);
 
       if (userData.isNotEmpty) {
-        if (userData[0]['isAdmin'] == true) {
-          return _RouteResult.widget(const AdminMainScreen());
-        }
+        // Admin accounts used to be sent to an empty "Admin Panel"
+        // placeholder (no content, no sign-out - looked frozen). Real
+        // admin work happens in the separate Admin app, so everyone
+        // gets the normal retailer home here.
         return _RouteResult.widget(const NewMainScreen());
       }
 
