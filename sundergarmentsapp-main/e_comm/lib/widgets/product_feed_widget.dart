@@ -2,7 +2,6 @@
 // Replaces the categories section with a modern filter system
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -33,30 +32,24 @@ class _ProductFeedWidgetState extends State<ProductFeedWidget> {
   // Loading state management to prevent multiple taps
   final Set<String> _addingToCartProducts = <String>{};
 
-  // Collapses the category row out of the way while the person is
-  // actively scrolling through products (swipe down = browsing, give
-  // that space to products), and brings it back the moment they
-  // scroll back up toward the top - same behavior as most shopping
-  // apps' category/filter bars.
-  bool _categoriesCollapsed = false;
+  // Streams are created once and reused. Calling .snapshots() inside
+  // build() meant every setState (typing in search, picking a category)
+  // handed StreamBuilder a brand-new stream, re-subscribing and
+  // flashing the list back to its loading state.
+  late final Stream<QuerySnapshot> _categoriesStream;
+  late final Stream<QuerySnapshot> _productsStream;
 
-  bool _handleProductListScroll(ScrollNotification notification) {
-    if (notification is UserScrollNotification) {
-      if (notification.direction == ScrollDirection.reverse &&
-          !_categoriesCollapsed) {
-        setState(() => _categoriesCollapsed = true);
-      } else if (notification.direction == ScrollDirection.forward &&
-          _categoriesCollapsed) {
-        setState(() => _categoriesCollapsed = false);
-      }
-    } else if (notification is ScrollUpdateNotification) {
-      // Snap back open once scrolled back to the very top, even if
-      // the last directional nudge was still "reverse".
-      if (notification.metrics.pixels <= 0 && _categoriesCollapsed) {
-        setState(() => _categoriesCollapsed = false);
-      }
-    }
-    return false;
+  @override
+  void initState() {
+    super.initState();
+    _categoriesStream = FirebaseFirestore.instance
+        .collection('categories')
+        .orderBy('categoryName')
+        .snapshots();
+    _productsStream = FirebaseFirestore.instance
+        .collection('products')
+        .orderBy('createdAt', descending: true)
+        .snapshots();
   }
 
   // Stable category order to prevent position shifting
@@ -94,32 +87,13 @@ class _ProductFeedWidgetState extends State<ProductFeedWidget> {
         // Search bar (always visible)
         _buildSearchBar(),
 
-        // Category grid - hidden while actively searching, so search
-        // results get the full remaining space instead of fighting
-        // the grid for room. Reappears the moment the search is
-        // cleared. Also collapses away (rather than just disappearing)
-        // while the person swipes down through the product list, via
-        // AnimatedAlign + heightFactor - the StreamBuilder underneath
-        // stays mounted the whole time so category data never
-        // re-fetches or flickers, only its visible height changes.
-        if (searchQuery.isEmpty)
-          ClipRect(
-            child: AnimatedAlign(
-              duration: const Duration(milliseconds: 220),
-              curve: Curves.easeInOut,
-              alignment: Alignment.topCenter,
-              heightFactor: _categoriesCollapsed ? 0.0 : 1.0,
-              child: _buildCategoryFilters(),
-            ),
-          ),
-
-        // Products List
-        Expanded(
-          child: NotificationListener<ScrollNotification>(
-            onNotification: _handleProductListScroll,
-            child: _buildProductsGrid(),
-          ),
-        ),
+        // Categories and products share ONE scroll view. The category
+        // grid is simply the first item in it, so it scrolls up and
+        // away with the products under the person's finger - no state
+        // flips, no resizing of the product viewport (which is what
+        // used to make the images flash and the grid snap back open),
+        // and it only comes back when they scroll to the very top.
+        Expanded(child: _buildScrollBody()),
       ],
     );
   }
@@ -156,10 +130,7 @@ class _ProductFeedWidgetState extends State<ProductFeedWidget> {
 
   Widget _buildCategoryFilters() {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('categories')
-          .orderBy('categoryName')
-          .snapshots(),
+      stream: _categoriesStream,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           print('Category stream error: ${snapshot.error}');
@@ -204,45 +175,77 @@ class _ProductFeedWidgetState extends State<ProductFeedWidget> {
     );
   }
 
-  Widget _buildProductsGrid() {
+  Widget _buildScrollBody() {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('products')
-          .orderBy('createdAt', descending: true)
-          .snapshots(),
+      stream: _productsStream,
       builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return const AppErrorState(
+        return CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          // Build a little beyond the viewport so thumbnails are
+          // already decoded by the time they scroll into view.
+          cacheExtent: 900,
+          slivers: [
+            // Hidden while searching so results get the full space.
+            if (searchQuery.isEmpty)
+              SliverToBoxAdapter(child: _buildCategoryFilters()),
+            ..._buildProductSlivers(snapshot),
+          ],
+        );
+      },
+    );
+  }
+
+  List<Widget> _buildProductSlivers(AsyncSnapshot<QuerySnapshot> snapshot) {
+    if (snapshot.hasError) {
+      return const [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: AppErrorState(
             title: 'Could not load products',
             message: 'Please check your connection and try again.',
-          );
-        }
+          ),
+        ),
+      ];
+    }
 
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return ListView.builder(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: 6,
-            itemBuilder: (context, index) => const ProductListTileSkeleton(),
-          );
-        }
+    if (snapshot.connectionState == ConnectionState.waiting) {
+      return [
+        SliverPadding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          sliver: SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) => const ProductListTileSkeleton(),
+              childCount: 6,
+            ),
+          ),
+        ),
+      ];
+    }
 
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const AppEmptyState(
+    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+      return const [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: AppEmptyState(
             icon: Icons.storefront_outlined,
             title: 'No products available',
             message: 'Please check back again soon.',
-          );
-        }
+          ),
+        ),
+      ];
+    }
 
-        final products = _filterProducts(snapshot.data!.docs);
+    final products = _filterProducts(snapshot.data!.docs);
 
-        if (products.isEmpty) {
-          // Distinct, more specific copy depending on why nothing
-          // matched - a mistyped search and an empty category are
-          // different situations and deserve different guidance.
-          if (searchQuery.isNotEmpty) {
-            return AppEmptyState(
+    if (products.isEmpty) {
+      // Distinct, more specific copy depending on why nothing
+      // matched - a mistyped search and an empty category are
+      // different situations and deserve different guidance.
+      if (searchQuery.isNotEmpty) {
+        return [
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: AppEmptyState(
               icon: Icons.search_off,
               title: 'No matching products found',
               message: 'Please check your spelling, or try a different search term.',
@@ -253,47 +256,61 @@ class _ProductFeedWidgetState extends State<ProductFeedWidget> {
                   _searchController.clear();
                 });
               },
-            );
-          }
-          return _buildComingSoonState();
-        }
+            ),
+          ),
+        ];
+      }
+      return [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: _buildComingSoonState(),
+        ),
+      ];
+    }
 
-        return ListView.builder(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          physics: const AlwaysScrollableScrollPhysics(),
-          itemCount: products.length,
-          itemBuilder: (context, index) {
-            final productData = products[index].data() as Map<String, dynamic>;
-            
-            // Switched to fromMap so this picks up fabric/moq/variants
-            // like every other product list screen now does - preserving
-            // the same null-safety this screen had by pre-sanitizing the
-            // map before handing it to fromMap.
-            final safeProductData = <String, dynamic>{
-              ...productData,
-              'productId': productData['productId'] ?? '',
-              'categoryId': productData['categoryId'] ?? '',
-              'productName': productData['productName'] ?? '',
-              'categoryName': productData['categoryName'] ?? '',
-              'salePrice': productData['salePrice'] ?? '',
-              'fullPrice': productData['fullPrice'] ?? '',
-              'productImages': List<String>.from(productData['productImages'] ?? []),
-              'deliveryTime': productData['deliveryTime'] ?? '',
-              'isSale': productData['isSale'] ?? false,
-              'productDescription': productData['productDescription'] ?? '',
-            };
-            final productModel = ProductModel.fromMap(safeProductData);
+    return [
+      SliverPadding(
+        padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.md),
+        sliver: SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              final productData = products[index].data() as Map<String, dynamic>;
 
-            return AppProductListTile(
-              product: productModel,
-              onTap: () => Get.to(() => ProductDetailsScreen(productModel: productModel)),
-              onAddToCart: () => _handleAddToCart(productModel),
-              isAddingToCart: _addingToCartProducts.contains(productModel.productId),
-            );
-          },
-        );
-      },
-    );
+              // Switched to fromMap so this picks up fabric/moq/variants
+              // like every other product list screen now does - preserving
+              // the same null-safety this screen had by pre-sanitizing the
+              // map before handing it to fromMap.
+              final safeProductData = <String, dynamic>{
+                ...productData,
+                'productId': productData['productId'] ?? '',
+                'categoryId': productData['categoryId'] ?? '',
+                'productName': productData['productName'] ?? '',
+                'categoryName': productData['categoryName'] ?? '',
+                'salePrice': productData['salePrice'] ?? '',
+                'fullPrice': productData['fullPrice'] ?? '',
+                'productImages': List<String>.from(productData['productImages'] ?? []),
+                'deliveryTime': productData['deliveryTime'] ?? '',
+                'isSale': productData['isSale'] ?? false,
+                'productDescription': productData['productDescription'] ?? '',
+              };
+              final productModel = ProductModel.fromMap(safeProductData);
+
+              return AppProductListTile(
+                // Stable identity per product so a stream update never
+                // tears down and re-creates a tile's image.
+                key: ValueKey(products[index].id),
+                product: productModel,
+                onTap: () => Get.to(() => ProductDetailsScreen(productModel: productModel)),
+                onAddToCart: () => _handleAddToCart(productModel),
+                isAddingToCart: _addingToCartProducts.contains(productModel.productId),
+              );
+            },
+            childCount: products.length,
+          ),
+        ),
+      ),
+    ];
   }
 
   Widget _buildComingSoonState() {

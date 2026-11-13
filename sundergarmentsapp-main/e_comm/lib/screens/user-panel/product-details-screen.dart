@@ -47,7 +47,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
   // product's details card reachable without excess scrolling no
   // matter what shape its photos are; BoxFit.cover inside that fixed
   // box still shows the photo cleanly.
-  static const double _carouselHeight = 300.0;
+  static const double _carouselHeight = 260.0;
+  // Current gallery page, kept in a notifier so swiping photos only
+  // repaints the dots, not the whole screen.
+  final ValueNotifier<int> _imageIndex = ValueNotifier<int>(0);
   bool _quantityError = false;
   late TextEditingController _quantityController;
   
@@ -127,7 +130,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
   // actually entered via the current Admin App. That's why nothing but
   // possibly a stray sentence ever showed here, even for products with
   // fabric/size/color/MOQ correctly saved.
-  Widget _buildSpecsTable() {
+  List<MapEntry<String, String>> _specRows() {
     final product = widget.productModel;
     final variants = product.variants;
     final sizes = variants.map((v) => v.size).where((s) => s.isNotEmpty).toSet().toList();
@@ -141,11 +144,16 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
     if (product.deliveryTime.isNotEmpty) {
       rows.add(MapEntry('Delivery Time', product.deliveryTime));
     }
+    return rows;
+  }
+
+  Widget _buildSpecsTable() {
+    final rows = _specRows();
 
     if (rows.isEmpty) return const SizedBox.shrink();
 
     return Container(
-      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         border: Border.all(color: AppColors.surfaceBorder),
         borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -279,6 +287,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
   @override
   void dispose() {
     _quantityController.dispose();
+    _imageIndex.dispose();
     _shakeController.dispose();
     _highlightController.dispose();
     super.dispose();
@@ -318,14 +327,6 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                'Qty: ',
-                style: const TextStyle(
-                  fontSize: 16.0,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.textSecondary,
-                ),
-              ),
               Container(
                 decoration: BoxDecoration(
                   border: Border.all(
@@ -356,8 +357,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
                         }
                       },
                       child: Container(
-                        width: 32,
-                        height: 32,
+                        width: 38,
+                        height: 38,
                         decoration: BoxDecoration(
                           color: (_selectedQuantity != null && _selectedQuantity! > (widget.productModel.moq > 0 ? widget.productModel.moq : 1))
                               ? AppColors.textPrimary 
@@ -383,7 +384,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
                     // visibly clipped its last digit.
                     Container(
                       width: 76,
-                      height: 32,
+                      height: 38,
                       decoration: const BoxDecoration(
                         color: AppColors.surface,
                         border: Border.symmetric(
@@ -447,8 +448,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
                         });
                       },
                       child: Container(
-                        width: 32,
-                        height: 32,
+                        width: 38,
+                        height: 38,
                         decoration: BoxDecoration(
                           color: AppColors.brand,
                           borderRadius: const BorderRadius.only(
@@ -473,340 +474,534 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
     );
   }
 
-  Widget _buildLotCaption() {
+  // ---------------------------------------------------------------
+  // Layout helpers
+  // ---------------------------------------------------------------
+
+  // Indian digit grouping (12,34,567) with no trailing ".00".
+  String _formatInr(double value) {
+    final fixed = value == value.roundToDouble()
+        ? value.toStringAsFixed(0)
+        : value.toStringAsFixed(2);
+    final parts = fixed.split('.');
+    var digits = parts[0];
+    if (digits.length > 3) {
+      final last3 = digits.substring(digits.length - 3);
+      var rest = digits.substring(0, digits.length - 3);
+      final groups = <String>[];
+      while (rest.length > 2) {
+        groups.insert(0, rest.substring(rest.length - 2));
+        rest = rest.substring(0, rest.length - 2);
+      }
+      if (rest.isNotEmpty) groups.insert(0, rest);
+      digits = '${groups.join(',')},$last3';
+    }
+    return parts.length > 1 ? '$digits.${parts[1]}' : digits;
+  }
+
+  bool get _onSale =>
+      widget.productModel.isSale == true && widget.productModel.salePrice != '';
+
+  double _unitPrice() {
+    final raw = _onSale ? widget.productModel.salePrice : widget.productModel.fullPrice;
+    return double.tryParse(raw.toString()) ?? 0;
+  }
+
+  String _lotCaptionText() {
     final moq = widget.productModel.moq > 0 ? widget.productModel.moq : 1;
     final qty = _selectedQuantity ?? 0;
-    if (moq <= 1 || qty <= 0) return const SizedBox.shrink();
+    if (moq <= 1) return 'Enter the number of pieces';
+    if (qty <= 0) return 'Minimum order: $moq pcs per lot';
+    if (qty % moq == 0) {
+      final lots = qty ~/ moq;
+      return '$lots lot${lots == 1 ? '' : 's'} of $moq pcs each';
+    }
+    return 'Custom quantity (MOQ is $moq pcs per lot)';
+  }
 
-    final isExactLots = qty % moq == 0;
-    final String caption = isExactLots
-        ? '${qty ~/ moq} lot${qty ~/ moq == 1 ? '' : 's'} of $moq pcs each'
-        : 'Custom quantity (MOQ is $moq pcs per lot)';
+  Widget _buildImageGallery() {
+    final images = List<String>.from(widget.productModel.productImages);
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8.0, 4.0, 8.0, 0.0),
-      child: Text(
-        caption,
-        style: const TextStyle(fontSize: 12.0, color: AppColors.textSecondary),
+    if (images.isEmpty) {
+      return Container(
+        height: _carouselHeight,
+        width: double.infinity,
+        color: AppColors.surfaceMuted,
+        child: const Icon(
+          Icons.image_not_supported_outlined,
+          size: 40,
+          color: AppColors.textSecondary,
+        ),
+      );
+    }
+
+    return Container(
+      height: _carouselHeight,
+      width: double.infinity,
+      color: AppColors.surfaceMuted,
+      child: Stack(
+        children: [
+          CarouselSlider.builder(
+            itemCount: images.length,
+            itemBuilder: (context, index, realIndex) {
+              return GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => FullscreenImageViewer.open(
+                  context,
+                  imageUrls: images,
+                  initialIndex: index,
+                ),
+                child: CachedNetworkImage(
+                  imageUrl: images[index],
+                  fit: BoxFit.contain,
+                  width: double.infinity,
+                  height: _carouselHeight,
+                  placeholder: (context, url) => const Center(
+                    child: CupertinoActivityIndicator(),
+                  ),
+                  errorWidget: (context, url, error) => const Center(
+                    child: Icon(
+                      Icons.broken_image_outlined,
+                      color: AppColors.textSecondary,
+                      size: 36,
+                    ),
+                  ),
+                ),
+              );
+            },
+            options: CarouselOptions(
+              height: _carouselHeight,
+              viewportFraction: 1.0,
+              enlargeCenterPage: false,
+              autoPlay: false,
+              enableInfiniteScroll: images.length > 1,
+              onPageChanged: (index, reason) => _imageIndex.value = index,
+            ),
+          ),
+
+          // Zoom affordance
+          Positioned(
+            right: 12,
+            bottom: 12,
+            child: IgnorePointer(
+              child: Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: AppColors.surface.withOpacity(0.92),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.surfaceBorder),
+                ),
+                child: const Icon(
+                  Icons.zoom_out_map,
+                  size: 16,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ),
+          ),
+
+          // Page dots
+          if (images.length > 1)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 14,
+              child: IgnorePointer(
+                child: ValueListenableBuilder<int>(
+                  valueListenable: _imageIndex,
+                  builder: (context, current, _) {
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(images.length, (i) {
+                        final active = i == current;
+                        return AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          margin: const EdgeInsets.symmetric(horizontal: 3),
+                          width: active ? 18 : 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: active
+                                ? AppColors.brand
+                                : AppColors.textSecondary.withOpacity(0.35),
+                            borderRadius: BorderRadius.circular(3),
+                          ),
+                        );
+                      }),
+                    );
+                  },
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    CalculateProductRatingController calculateProductRatingController = Get.put(
-        CalculateProductRatingController(widget.productModel.productId));
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Product Details"),
-        actions: [
-          const CartIconWithBadge(),
+  Widget _buildCategoryChip() {
+    final name = _getCategoryName(
+      widget.productModel.categoryId,
+      widget.productModel.categoryName,
+    );
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.brandTintBg,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+      ),
+      child: Text(
+        name,
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: AppColors.brandTintFg,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPriceRow() {
+    final product = widget.productModel;
+    final hasStock = product.variants.isNotEmpty;
+
+    final priceWidgets = <Widget>[
+      Text(
+        '₹${_onSale ? product.salePrice : product.fullPrice}',
+        style: const TextStyle(
+          fontSize: 26,
+          fontWeight: FontWeight.w700,
+          color: AppColors.textPrimary,
+          height: 1.1,
+        ),
+      ),
+    ];
+
+    if (_onSale) {
+      priceWidgets.add(Text(
+        '₹${product.fullPrice}',
+        style: const TextStyle(
+          fontSize: 15,
+          color: AppColors.textSecondary,
+          decoration: TextDecoration.lineThrough,
+        ),
+      ));
+      final full = double.tryParse(product.fullPrice.toString()) ?? 0;
+      final sale = double.tryParse(product.salePrice.toString()) ?? 0;
+      if (full > sale && sale > 0) {
+        final off = ((1 - sale / full) * 100).round();
+        if (off > 0) {
+          priceWidgets.add(Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: AppColors.successBg,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+            ),
+            child: Text(
+              '$off% off',
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: AppColors.successFg,
+              ),
+            ),
+          ));
+        }
+      }
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Wrap(
+                spacing: 10,
+                runSpacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: priceWidgets,
+              ),
+              const SizedBox(height: 2),
+              const Text(
+                'per piece',
+                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+              ),
+            ],
+          ),
+        ),
+        // GUARD: only for products that actually have tracked variants,
+        // otherwise a product with no inventory data yet would wrongly
+        // show as Out of Stock.
+        if (hasStock) ...[
+          const SizedBox(width: AppSpacing.md),
+          StockIndicator(status: product.stockStatus, fontSize: 13),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildQuantitySection() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceMuted,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Quantity',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _lotCaptionText(),
+                  style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          _buildQuantitySelector(),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Container(
-          padding: EdgeInsets.only(bottom: 20.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+    );
+  }
+
+  Widget _sectionTitle(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          color: AppColors.textPrimary,
+        ),
+      ),
+    );
+  }
+
+  // Sticky footer: running total on the left, the one primary action on
+  // the right - always on screen, so nothing about ordering depends on
+  // how far down the page someone has scrolled.
+  Widget _buildBottomBar() {
+    final isOutOfStock = widget.productModel.variants.isNotEmpty &&
+        widget.productModel.stockStatus == StockStatus.outOfStock;
+    final qty = _selectedQuantity ?? 0;
+    final total = _unitPrice() * qty;
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        border: Border(top: BorderSide(color: AppColors.surfaceBorder)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(AppSpacing.md, 10, AppSpacing.md, 10),
+          child: Row(
             children: [
-              //product images
-              const SizedBox(height: AppSpacing.sm),
-              CarouselSlider(
-                items: widget.productModel.productImages.asMap().entries.map((entry) {
-                  final imageIndex = entry.key;
-                  final imageUrl = entry.value;
-                  return GestureDetector(
-                    onTap: () => FullscreenImageViewer.open(
-                      context,
-                      // ProductModel.productImages is a raw `List`
-                      // (List<dynamic>) - cast explicitly since the
-                      // viewer takes a typed List<String>.
-                      imageUrls: List<String>.from(widget.productModel.productImages),
-                      initialIndex: imageIndex,
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(10.0),
-                      child: Container(
-                        // A fixed carousel height (set via
-                        // CarouselOptions.height below) instead of an
-                        // aspect-ratio-driven one that scaled off the
-                        // photo's own shape with no upper bound - a
-                        // tall/portrait photo used to balloon this box
-                        // (and everything below it) to take over
-                        // almost the whole screen, pushing price/specs/
-                        // add-to-cart off-screen. BoxFit.cover keeps
-                        // every photo filling that fixed box cleanly;
-                        // tapping opens the real photo uncropped in the
-                        // full-screen zoom viewer.
-                        color: AppColors.surfaceMuted,
-                        child: CachedNetworkImage(
-                          imageUrl: imageUrl,
-                          fit: BoxFit.cover,
-                          width: Get.width - 20,
-                          placeholder: (context, url) => const ColoredBox(
-                            color: AppColors.surfaceMuted,
-                            child: Center(
-                              child: CupertinoActivityIndicator(),
-                            ),
-                          ),
-                          errorWidget: (context, url, error) => Icon(Icons.error),
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
-                options: CarouselOptions(
-                  scrollDirection: Axis.horizontal,
-                  autoPlay: true,
-                  height: _carouselHeight,
-                  viewportFraction: 0.9,
-                  enlargeCenterPage: true,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              // Tap-to-zoom hint - the carousel itself no longer makes
-              // this obvious now that it's capped to a smaller box.
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(Icons.zoom_in, size: 14, color: AppColors.textSecondary),
-                  SizedBox(width: 4),
-                  Text(
-                    'Tap photo to zoom',
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Total',
                     style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  ),
+                  Text(
+                    qty > 0 && total > 0 ? '₹${_formatInr(total)}' : '—',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
                 ],
               ),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
-                child: Card(
-                  child: Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
-                        child: Container(
-                          alignment: Alignment.topLeft,
-                          child: Text(
-                            widget.productModel.productName,
-                            style: const TextStyle(
-                              fontSize: 24.0,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textPrimary,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: AnimatedBuilder(
+                  animation: _shakeAnimation,
+                  builder: (context, child) {
+                    return Transform.translate(
+                      offset: Offset(
+                        _shakeAnimation.value *
+                            ((_shakeController.value * 4).round() % 2 == 0 ? 1 : -1),
+                        0,
                       ),
-                      // GUARD: same as the list tile - only show this
-                      // for products that actually have tracked
-                      // variants, otherwise a product with no
-                      // inventory data set up yet would wrongly show
-                      // as Out of Stock.
-                      if (widget.productModel.variants.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 8.0),
-                          child: Align(
-                            alignment: Alignment.topLeft,
-                            child: StockIndicator(
-                              status: widget.productModel.stockStatus,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(8.0, 0.0, 8.0, 4.0),
-                        child: Container(
-                          alignment: Alignment.topLeft,
-                          child: widget.productModel.isSale == true &&
-                                  widget.productModel.salePrice != ''
-                              ? Row(
-                                  children: [
-                                    Text(
-                                      "₹${widget.productModel.salePrice}",
-                                      style: const TextStyle(
-                                        fontSize: 20.0,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.successFg,
-                                      ),
+                      child: child,
+                    );
+                  },
+                  child: SizedBox(
+                    height: 50,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        disabledBackgroundColor:
+                            _isAddingToCart ? AppColors.brand : AppColors.surfaceMuted,
+                        disabledForegroundColor:
+                            _isAddingToCart ? AppColors.textOnBrand : AppColors.textSecondary,
+                      ),
+                      onPressed: (isOutOfStock || _isAddingToCart)
+                          ? null
+                          : _onAddToCartPressed,
+                      child: isOutOfStock
+                          ? const Text('Out of stock')
+                          : _isAddingToCart
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      AppColors.textOnBrand,
                                     ),
-                                    const SizedBox(width: 8.0),
-                                    Text(
-                                      "₹${widget.productModel.fullPrice}",
-                                      style: const TextStyle(
-                                        fontSize: 16.0,
-                                        color: AppColors.textSecondary,
-                                        decoration: TextDecoration.lineThrough,
-                                      ),
-                                    ),
-                                  ],
+                                  ),
                                 )
-                              : Text(
-                                  "₹${widget.productModel.fullPrice}",
-                                  style: const TextStyle(
-                                    fontSize: 20.0,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.successFg,
-                                  ),
-                                ),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(8.0, 0.0, 8.0, 4.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Expanded(
-                              child: Container(
-                                alignment: Alignment.centerLeft,
-                                child: Text(
-                                  "Category: " + _getCategoryName(
-                                    widget.productModel.categoryId, 
-                                    widget.productModel.categoryName
-                                  ),
-                                  style: const TextStyle(
-                                    fontSize: 16.0,
-                                    color: AppColors.textSecondary,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 16.0),
-                            _buildQuantitySelector(),
-                          ],
-                        ),
-                      ),
-                      _buildLotCaption(),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(8.0, 0.0, 8.0, 4.0),
-                        child: _buildSpecsTable(),
-                      ),
-                      // Product details (Quantity, Size, Description)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(8.0, 0.0, 8.0, 4.0),
-                        child: Container(
-                          alignment: Alignment.topLeft,
-                          child: _buildProductDetails(),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(8.0, 0.0, 8.0, 8.0),
-                        child: Center(
-                          child: AnimatedBuilder(
-                            animation: _shakeAnimation,
-                            builder: (context, child) {
-                              final isOutOfStock = widget.productModel.variants.isNotEmpty &&
-                                  widget.productModel.stockStatus == StockStatus.outOfStock;
-                              return Transform.translate(
-                                offset: Offset(_shakeAnimation.value * 
-                                    ((_shakeController.value * 4).round() % 2 == 0 ? 1 : -1), 0),
-                                child: Material(
-                                  child: Container(
-                                    width: Get.width * 0.7,
-                                    height: Get.height / 16,
-                                    decoration: BoxDecoration(
-                                      color: isOutOfStock ? AppColors.surfaceMuted : AppColors.brand,
-                                      borderRadius: BorderRadius.circular(AppRadius.lg),
-                                    ),
-                                    child: TextButton(
-                                      child: isOutOfStock
-                                        ? const Text(
-                                            "Out of stock",
-                                            style: TextStyle(color: AppColors.textSecondary),
-                                          )
-                                        : _isAddingToCart
-                                        ? const Row(
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            children: [
-                                              SizedBox(
-                                                width: 16,
-                                                height: 16,
-                                                child: CircularProgressIndicator(
-                                                  strokeWidth: 2,
-                                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                                    AppColors.textOnBrand,
-                                                  ),
-                                                ),
-                                              ),
-                                              SizedBox(width: 8),
-                                              Text(
-                                                "Adding...",
-                                                style: TextStyle(
-                                                  color: AppColors.textOnBrand,
-                                                ),
-                                              ),
-                                            ],
-                                          )
-                                        : const Text(
-                                            "Add to cart",
-                                            style: TextStyle(
-                                              color: AppColors.textOnBrand,
-                                            ),
-                                          ),
-                                      onPressed: isOutOfStock ? null : (_isAddingToCart ? null : () async {
-                                        // Check if quantity is valid (allow mass orders)
-                                        if (_selectedQuantity == null || _selectedQuantity! < 1) {
-                                          _triggerShakeAnimation();
-                                          return;
-                                        }
-                                        
-                                        // Prevent multiple taps
-                                        if (_isAddingToCart) return;
-                                        
-                                        setState(() {
-                                          _isAddingToCart = true;
-                                        });
-                                        
-                                        try {
-                                          await checkProductExistence(
-                                            uId: user!.uid, 
-                                            quantityIncrement: _selectedQuantity!
-                                          );
-                                          
-                                          // Show success message
-                                          Get.snackbar(
-                                            'Success',
-                                            'Item added to cart',
-                                            backgroundColor: Colors.green,
-                                            colorText: Colors.white,
-                                            duration: const Duration(seconds: 2),
-                                          );
-                                          
-                                          // Navigate to cart immediately
-                                          await Get.to(() => cart_screen.CartScreen());
-                                        } catch (e) {
-                                          Get.snackbar(
-                                            'Error',
-                                            'Failed to add item to cart',
-                                            backgroundColor: Colors.red,
-                                            colorText: Colors.white,
-                                            duration: const Duration(seconds: 2),
-                                          );
-                                        } finally {
-                                          // Reset loading state
-                                          if (mounted) {
-                                            setState(() {
-                                              _isAddingToCart = false;
-                                            });
-                                          }
-                                        }
-                                      }),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                    ],
+                              : const Text('Add to cart'),
+                    ),
                   ),
                 ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Future<void> _onAddToCartPressed() async {
+    FocusScope.of(context).unfocus();
+
+    // Check if quantity is valid (allow mass orders)
+    if (_selectedQuantity == null || _selectedQuantity! < 1) {
+      _triggerShakeAnimation();
+      return;
+    }
+
+    // Prevent multiple taps
+    if (_isAddingToCart) return;
+
+    setState(() {
+      _isAddingToCart = true;
+    });
+
+    try {
+      await checkProductExistence(
+        uId: user!.uid,
+        quantityIncrement: _selectedQuantity!,
+      );
+
+      // Show success message
+      Get.snackbar(
+        'Success',
+        'Item added to cart',
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 2),
+      );
+
+      // Navigate to cart immediately
+      await Get.to(() => cart_screen.CartScreen());
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to add item to cart',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 2),
+      );
+    } finally {
+      // Reset loading state
+      if (mounted) {
+        setState(() {
+          _isAddingToCart = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    CalculateProductRatingController calculateProductRatingController = Get.put(
+        CalculateProductRatingController(widget.productModel.productId));
+
+    final product = widget.productModel;
+    final parsed = _parseProductDescription(product.productDescription);
+    final hasDescription = parsed['quantity']!.isNotEmpty ||
+        parsed['size']!.isNotEmpty ||
+        parsed['otherInfo']!.isNotEmpty;
+    final hasSpecs = _specRows().isNotEmpty;
+    final displayName = product.productName.trim().replaceAll(RegExp(r'\s+'), ' ');
+
+    return Scaffold(
+      backgroundColor: AppColors.surface,
+      appBar: AppBar(
+        title: const Text("Product Details"),
+        actions: [
+          const CartIconWithBadge(),
+        ],
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildImageGallery(),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.md, AppSpacing.md, AppSpacing.md, AppSpacing.lg),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildCategoryChip(),
+                        const SizedBox(height: 10),
+                        Text(
+                          displayName,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                            height: 1.25,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        _buildPriceRow(),
+                        const SizedBox(height: AppSpacing.md),
+                        _buildQuantitySection(),
+                        if (hasSpecs) ...[
+                          const SizedBox(height: AppSpacing.lg),
+                          _sectionTitle('Product details'),
+                          _buildSpecsTable(),
+                        ],
+                        if (hasDescription) ...[
+                          const SizedBox(height: AppSpacing.lg),
+                          _sectionTitle('Description'),
+                          _buildProductDetails(),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          _buildBottomBar(),
+        ],
       ),
     );
   }

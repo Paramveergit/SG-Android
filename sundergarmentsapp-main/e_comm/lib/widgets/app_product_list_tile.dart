@@ -76,6 +76,14 @@ class AppProductListTile extends StatelessWidget {
                         ? CachedNetworkImage(
                             imageUrl: product.productImages[0],
                             fit: BoxFit.cover,
+                            // The tile shows an 84px thumbnail (~252px on
+                            // a 3x screen) but used to decode the full
+                            // original photo - heavy enough to stutter
+                            // scrolling and get evicted from memory,
+                            // which showed up as images flashing white.
+                            memCacheWidth: 300,
+                            fadeInDuration: const Duration(milliseconds: 120),
+                            fadeOutDuration: Duration.zero,
                             placeholder: (_, __) => Container(color: AppColors.surfaceMuted),
                             errorWidget: (_, __, ___) => Container(
                               color: AppColors.surfaceMuted,
