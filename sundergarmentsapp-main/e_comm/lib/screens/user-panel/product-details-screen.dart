@@ -1011,8 +1011,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> with Ticker
   }) async {
     final number = "+917850078100";
     final message =
-        // "Hello Sunder Garments \n I want to know about this product \n ${productModel.productName} \n ${productModel.productId}";
-      "Hello Sunder Garments \n"
+      "Hello StockLot \n"
       "I want to know about this product \n"
       "Product Name: ${productModel.productName} \n"
       "Product ID: ${productModel.productId} \n"

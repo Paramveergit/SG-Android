@@ -9,7 +9,8 @@ import '../theme/app_colors.dart';
 /// of truth. New code should use AppColors directly instead of adding
 /// more references to this class.
 class AppConstant {
-  static String appMainName = 'Sunder Garments';
+  static String appMainName = 'StockLot';
+  static String appTagline = 'by SG';
   static String appPoweredBy = 'Powered By SG';
   static const appMainColor = AppColors.brand;
   static const appScendoryColor = AppColors.brandDark;

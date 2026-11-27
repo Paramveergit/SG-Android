@@ -34,11 +34,21 @@ class WelcomeScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.md),
                 const Text(
-                  'Sunder Garments',
+                  'StockLot',
                   style: TextStyle(
                     fontSize: 22.0,
                     fontWeight: FontWeight.bold,
                     color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                const Text(
+                  'by SG',
+                  style: TextStyle(
+                    fontSize: 13.0,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.6,
+                    color: AppColors.brand,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xs),

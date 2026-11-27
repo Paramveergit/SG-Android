@@ -71,7 +71,7 @@ class _SignInScreenState extends State<SignInScreen> {
                 
                 // Welcome text
                 const Text(
-                  "Welcome to Sunder Garments",
+                  "Welcome to StockLot",
                   style: TextStyle(
                     color: AppColors.textOnBrand,
                     fontSize: 28,

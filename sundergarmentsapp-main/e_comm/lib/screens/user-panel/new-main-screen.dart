@@ -218,19 +218,31 @@ class _NewMainScreenState extends State<NewMainScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Sunder Garments',
+              'StockLot',
               style: TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 18.0,
                 fontWeight: FontWeight.w700,
+                height: 1.15,
+              ),
+            ),
+            Text(
+              'by SG',
+              style: TextStyle(
+                color: AppColors.brand,
+                fontSize: 12.0,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.5,
+                height: 1.15,
               ),
             ),
             Text(
               'GST: 19AIQPD5899L1Z8',
               style: TextStyle(
                 color: AppColors.textSecondary,
-                fontSize: 12.0,
+                fontSize: 11.0,
                 fontWeight: FontWeight.w500,
+                height: 1.2,
               ),
             ),
           ],

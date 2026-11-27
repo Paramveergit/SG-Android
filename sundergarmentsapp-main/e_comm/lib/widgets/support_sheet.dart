@@ -67,7 +67,7 @@ void showSupportOptionsSheet(BuildContext context) {
             onTap: () async {
               Get.back();
               final message = Uri.encodeComponent(
-                  "Hi, I need help with my Sunder Garments order.");
+                  "Hi, I need help with my StockLot order.");
               final uri =
                   Uri.parse('https://wa.me/917850078100?text=$message');
               if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
